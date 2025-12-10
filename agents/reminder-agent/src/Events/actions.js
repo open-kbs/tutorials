@@ -506,7 +506,7 @@ export const getActions = (meta, event) => [
                 type: 'CHAT_IMAGE',
                 data: { imageUrl: uploaded.url },
                 ...meta,
-                _meta_actions: []  // Stop here, show image to user
+                _meta_actions: ["REQUEST_CHAT_MODEL"]  // Continue so agent can send to Telegram
             };
         } catch (e) {
             return {
