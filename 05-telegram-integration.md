@@ -13,8 +13,8 @@ Connect your agent to Telegram for notifications and receiving messages.
 ## 5.2 Add Secret to OpenKBS
 
 1. Go to [OpenKBS Console](https://openkbs.com)
-2. Open your agent settings
-3. Go to **Secrets** section
+2. Open your agent FileManager
+3. Go to **Secrets** section (click the Key Icon)
 4. Add: `telegramBotToken` = your bot token
 
 ## 5.3 Create a Telegram Channel (Optional)
@@ -400,13 +400,8 @@ https://chat.openkbs.com/publicAPIRequest?kbId=YOUR_KB_ID&removeTelegramWebhook=
 - Messages from Telegram create new chats
 - Agent can send notifications via `sendToTelegram` command
 
-## Complete Agent
+## Next Steps
 
-Congratulations! You've built a complete Reminder Agent with:
-- ✅ Backend commands (search, images)
-- ✅ Memory system (persistent storage)
-- ✅ Scheduled tasks (one-time reminders)
-- ✅ Cronjobs (automatic cleanup)
-- ✅ Telegram integration (bidirectional)
+Continue to [Tutorial 6: Frontend Rendering](./06-frontend-rendering.md) to learn how to customize the chat UI - display commands as icons, show images with download buttons, and more.
 
 The complete code is in [agents/reminder-agent/](./agents/reminder-agent/).

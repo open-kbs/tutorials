@@ -27,6 +27,7 @@ By the end of this series, you'll have a working **Reminder Agent** that can:
 | 3 | [Memory System](./03-memory-system.md) | Persistent storage with itemTypes |
 | 4 | [Scheduled Tasks](./04-scheduled-tasks.md) | One-time reminders and cronjobs |
 | 5 | [Telegram Integration](./05-telegram-integration.md) | Webhook setup and notifications |
+| 6 | [Frontend Rendering](./06-frontend-rendering.md) | Custom UI for commands and images |
 
 ## Quick Start
 
