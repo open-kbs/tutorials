@@ -1,5 +1,5 @@
 // Reminder Agent - Backend Actions
-// This file contains all command implementations
+// All command implementations with proper error handling
 
 // ============================================================================
 // HELPER FUNCTIONS
@@ -7,6 +7,7 @@
 
 /**
  * Upsert pattern - update item or create if not exists
+ * No race conditions - atomic operation
  */
 async function upsertItem(itemType, itemId, body) {
     try {
@@ -20,7 +21,6 @@ async function upsertItem(itemType, itemId, body) {
  * Set memory value with optional expiration
  */
 async function setMemoryValue(itemId, value, expirationInMinutes = null) {
-    // Ensure proper prefix
     if (!itemId.startsWith('memory_')) {
         itemId = `memory_${itemId}`;
     }
@@ -39,7 +39,7 @@ async function setMemoryValue(itemId, value, expirationInMinutes = null) {
 }
 
 /**
- * Get agent setting
+ * Get agent setting value
  */
 async function getAgentSetting(itemId) {
     try {
@@ -61,7 +61,7 @@ async function setAgentSetting(itemId, value) {
 }
 
 /**
- * Cleanup expired items
+ * Cleanup expired items by prefix
  */
 async function cleanupExpiredItems(prefix, limit = 100) {
     const result = await openkbs.fetchItems({
@@ -94,14 +94,17 @@ async function cleanupExpiredItems(prefix, limit = 100) {
 const TELEGRAM_BOT_TOKEN = '{{secrets.telegramBotToken}}';
 
 async function sendToTelegram(message, options = {}) {
-    // Get channel ID from agent settings
+    // Get channel ID from secrets or agent settings
     let channelId = '{{secrets.telegramChannelID}}';
     if (!channelId || channelId.includes('{{')) {
         channelId = await getAgentSetting('agent_telegramChannelID');
     }
 
     if (!channelId) {
-        return { success: false, error: 'Telegram channel not configured. Send a message to your channel first to auto-configure.' };
+        return {
+            success: false,
+            error: 'Telegram channel not configured. Send a message to your channel first to auto-configure, or set telegramChannelID secret.'
+        };
     }
 
     try {
@@ -161,7 +164,12 @@ export const getActions = (meta, event) => [
                 _meta_actions: ["REQUEST_CHAT_MODEL"]
             };
         } catch (e) {
-            return { type: "ERROR", error: e.message, ...meta, _meta_actions: ["REQUEST_CHAT_MODEL"] };
+            return {
+                type: "MEMORY_ERROR",
+                error: e.message,
+                ...meta,
+                _meta_actions: ["REQUEST_CHAT_MODEL"]
+            };
         }
     }],
 
@@ -173,9 +181,19 @@ export const getActions = (meta, event) => [
         try {
             const data = JSON.parse(match[1].trim());
             await openkbs.deleteItem(data.itemId);
-            return { type: "ITEM_DELETED", itemId: data.itemId, ...meta, _meta_actions: ["REQUEST_CHAT_MODEL"] };
+            return {
+                type: "ITEM_DELETED",
+                itemId: data.itemId,
+                ...meta,
+                _meta_actions: ["REQUEST_CHAT_MODEL"]
+            };
         } catch (e) {
-            return { type: "ERROR", error: e.message, ...meta, _meta_actions: ["REQUEST_CHAT_MODEL"] };
+            return {
+                type: "DELETE_ERROR",
+                error: e.message,
+                ...meta,
+                _meta_actions: ["REQUEST_CHAT_MODEL"]
+            };
         }
     }],
 
@@ -186,9 +204,19 @@ export const getActions = (meta, event) => [
     [/<cleanupMemory\s*\/>/s, async () => {
         try {
             const result = await cleanupExpiredItems('memory');
-            return { type: "CLEANUP_COMPLETE", cleaned: result.cleaned, ...meta, _meta_actions: ["REQUEST_CHAT_MODEL"] };
+            return {
+                type: "CLEANUP_COMPLETE",
+                cleaned: result.cleaned,
+                ...meta,
+                _meta_actions: ["REQUEST_CHAT_MODEL"]
+            };
         } catch (e) {
-            return { type: "ERROR", error: e.message, ...meta, _meta_actions: ["REQUEST_CHAT_MODEL"] };
+            return {
+                type: "CLEANUP_ERROR",
+                error: e.message,
+                ...meta,
+                _meta_actions: ["REQUEST_CHAT_MODEL"]
+            };
         }
     }],
 
@@ -255,7 +283,12 @@ export const getActions = (meta, event) => [
                 _meta_actions: ["REQUEST_CHAT_MODEL"]
             };
         } catch (e) {
-            return { type: "ERROR", error: e.message, ...meta, _meta_actions: ["REQUEST_CHAT_MODEL"] };
+            return {
+                type: "SCHEDULE_ERROR",
+                error: e.message,
+                ...meta,
+                _meta_actions: ["REQUEST_CHAT_MODEL"]
+            };
         }
     }],
 
@@ -266,9 +299,19 @@ export const getActions = (meta, event) => [
     [/<getScheduledTasks\s*\/>/s, async () => {
         try {
             const tasks = await openkbs.kb({ action: 'getScheduledTasks' });
-            return { type: 'SCHEDULED_TASKS', data: tasks, ...meta, _meta_actions: ["REQUEST_CHAT_MODEL"] };
+            return {
+                type: 'SCHEDULED_TASKS',
+                data: tasks,
+                ...meta,
+                _meta_actions: ["REQUEST_CHAT_MODEL"]
+            };
         } catch (e) {
-            return { type: "ERROR", error: e.message, ...meta, _meta_actions: ["REQUEST_CHAT_MODEL"] };
+            return {
+                type: "TASKS_ERROR",
+                error: e.message,
+                ...meta,
+                _meta_actions: ["REQUEST_CHAT_MODEL"]
+            };
         }
     }],
 
@@ -279,10 +322,23 @@ export const getActions = (meta, event) => [
     [/<deleteScheduledTask>([\s\S]*?)<\/deleteScheduledTask>/s, async (match) => {
         try {
             const data = JSON.parse(match[1].trim());
-            await openkbs.kb({ action: 'deleteScheduledTask', timestamp: data.timestamp });
-            return { type: 'TASK_DELETED', timestamp: data.timestamp, ...meta, _meta_actions: ["REQUEST_CHAT_MODEL"] };
+            await openkbs.kb({
+                action: 'deleteScheduledTask',
+                timestamp: data.timestamp
+            });
+            return {
+                type: 'TASK_DELETED',
+                timestamp: data.timestamp,
+                ...meta,
+                _meta_actions: ["REQUEST_CHAT_MODEL"]
+            };
         } catch (e) {
-            return { type: "ERROR", error: e.message, ...meta, _meta_actions: ["REQUEST_CHAT_MODEL"] };
+            return {
+                type: "DELETE_TASK_ERROR",
+                error: e.message,
+                ...meta,
+                _meta_actions: ["REQUEST_CHAT_MODEL"]
+            };
         }
     }],
 
@@ -315,7 +371,12 @@ export const getActions = (meta, event) => [
                 };
             }
         } catch (e) {
-            return { type: "ERROR", error: e.message, ...meta, _meta_actions: ["REQUEST_CHAT_MODEL"] };
+            return {
+                type: "TELEGRAM_ERROR",
+                error: e.message,
+                ...meta,
+                _meta_actions: ["REQUEST_CHAT_MODEL"]
+            };
         }
     }],
 
@@ -334,9 +395,19 @@ export const getActions = (meta, event) => [
             const results = response?.map(({ title, link, snippet }) => ({
                 title, link, snippet
             }));
-            return { type: 'SEARCH_RESULTS', data: results, ...meta, _meta_actions: ["REQUEST_CHAT_MODEL"] };
+            return {
+                type: 'SEARCH_RESULTS',
+                data: results,
+                ...meta,
+                _meta_actions: ["REQUEST_CHAT_MODEL"]
+            };
         } catch (e) {
-            return { type: "ERROR", error: e.message, ...meta, _meta_actions: ["REQUEST_CHAT_MODEL"] };
+            return {
+                type: "SEARCH_ERROR",
+                error: e.message,
+                ...meta,
+                _meta_actions: ["REQUEST_CHAT_MODEL"]
+            };
         }
     }],
 
@@ -354,9 +425,19 @@ export const getActions = (meta, event) => [
                 response.content = response.content.substring(0, 5000) + '... [truncated]';
             }
 
-            return { type: 'WEBPAGE_CONTENT', data: response, ...meta, _meta_actions: ["REQUEST_CHAT_MODEL"] };
+            return {
+                type: 'WEBPAGE_CONTENT',
+                data: response,
+                ...meta,
+                _meta_actions: ["REQUEST_CHAT_MODEL"]
+            };
         } catch (e) {
-            return { type: "ERROR", error: e.message, ...meta, _meta_actions: ["REQUEST_CHAT_MODEL"] };
+            return {
+                type: "WEBPAGE_ERROR",
+                error: e.message,
+                ...meta,
+                _meta_actions: ["REQUEST_CHAT_MODEL"]
+            };
         }
     }],
 
@@ -392,7 +473,12 @@ export const getActions = (meta, event) => [
                 _meta_actions: []  // Stop here, show image to user
             };
         } catch (e) {
-            return { type: "ERROR", error: e.message, ...meta, _meta_actions: ["REQUEST_CHAT_MODEL"] };
+            return {
+                type: "IMAGE_ERROR",
+                error: e.message,
+                ...meta,
+                _meta_actions: ["REQUEST_CHAT_MODEL"]
+            };
         }
     }]
 ];
