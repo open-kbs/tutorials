@@ -85,7 +85,7 @@ export const handler = async ({ payload, queryStringParameters, headers }) => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     url: WEBHOOK_URL,
-                    allowed_updates: ['message', 'channel_post'],
+                    allowed_updates: ['channel_post'],
                     drop_pending_updates: true,
                     secret_token: SECRET_TOKEN
                 })
@@ -164,7 +164,7 @@ export const handler = async ({ payload, queryStringParameters, headers }) => {
             return { ok: false, error: 'Invalid secret token' };
         }
 
-        // Handle channel posts (messages in channel)
+        // Handle channel posts only
         if (payload?.channel_post) {
             const post = payload.channel_post;
             const text = post.text || post.caption || '';
@@ -200,43 +200,10 @@ export const handler = async ({ payload, queryStringParameters, headers }) => {
             // Create chat for agent to process
             await openkbs.chats({
                 chatTitle: `TG: ${senderName}`,
-                message: `[TELEGRAM_MESSAGE] From ${senderName}:\n\n${text}`
+                message: `[TELEGRAM] From ${senderName}:\n\n${text}`
             });
 
             return { ok: true, processed: 'channel_post', messageId };
-        }
-
-        // Handle direct messages
-        if (payload?.message) {
-            const msg = payload.message;
-            const text = msg.text || msg.caption || '';
-            const chatId = msg.chat.id;
-            const messageId = msg.message_id;
-            const userName = msg.from?.username || msg.from?.first_name || 'User';
-
-            // Check for duplicate
-            const existing = await getTelegramMessage(messageId);
-            if (existing) {
-                return { ok: true, duplicate: true };
-            }
-
-            // Store message
-            await storeTelegramMessage(messageId, {
-                text,
-                from: userName,
-                chatId,
-                userId: msg.from?.id,
-                date: msg.date,
-                type: 'direct'
-            });
-
-            // Create chat for agent
-            await openkbs.chats({
-                chatTitle: `TG DM: ${userName}`,
-                message: `[TELEGRAM_DM] From ${userName}:\n\n${text}`
-            });
-
-            return { ok: true, processed: 'message', messageId };
         }
 
         return { ok: true, message: 'No action needed' };

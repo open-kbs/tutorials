@@ -7,6 +7,7 @@ import ScheduleIcon from '@mui/icons-material/Schedule';
 import ListAltIcon from '@mui/icons-material/ListAlt';
 import ClearIcon from '@mui/icons-material/Clear';
 import TelegramIcon from '@mui/icons-material/Telegram';
+import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
 
 // Single source of truth for all commands
 // selfClosing: true means <command/>, false means <command>...</command>
@@ -17,7 +18,8 @@ export const COMMANDS = {
     scheduleTask: { icon: ScheduleIcon },
     getScheduledTasks: { icon: ListAltIcon, selfClosing: true },
     deleteScheduledTask: { icon: ClearIcon },
-    sendToTelegram: { icon: TelegramIcon },
+    sendToTelegramChannel: { icon: TelegramIcon },
+    sendPhotoToTelegramChannel: { icon: PhotoCameraIcon },
     googleSearch: { icon: SearchIcon },
     webpageToText: { icon: ArticleIcon },
     createAIImage: { icon: ImageIcon }

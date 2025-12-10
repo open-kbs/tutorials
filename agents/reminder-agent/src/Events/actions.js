@@ -93,12 +93,16 @@ async function cleanupExpiredItems(prefix, limit = 100) {
 
 const TELEGRAM_BOT_TOKEN = '{{secrets.telegramBotToken}}';
 
-async function sendToTelegram(message, options = {}) {
-    // Get channel ID from secrets or agent settings
+async function getTelegramChannelId() {
     let channelId = '{{secrets.telegramChannelID}}';
     if (!channelId || channelId.includes('{{')) {
         channelId = await getAgentSetting('agent_telegramChannelID');
     }
+    return channelId;
+}
+
+async function sendToTelegramChannel(message, options = {}) {
+    const channelId = await getTelegramChannelId();
 
     if (!channelId) {
         return {
@@ -114,8 +118,41 @@ async function sendToTelegram(message, options = {}) {
             body: JSON.stringify({
                 chat_id: channelId,
                 text: message,
-                parse_mode: 'Markdown',
+                parse_mode: options.parse_mode || 'Markdown',
                 disable_notification: options.silent || false
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.ok) {
+            return { success: true, messageId: data.result.message_id };
+        }
+        return { success: false, error: data.description };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+}
+
+async function sendPhotoToTelegramChannel(photoUrl, caption = '') {
+    const channelId = await getTelegramChannelId();
+
+    if (!channelId) {
+        return {
+            success: false,
+            error: 'Telegram channel not configured.'
+        };
+    }
+
+    try {
+        const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: channelId,
+                photo: photoUrl,
+                caption: caption,
+                parse_mode: 'Markdown'
             })
         });
 
@@ -348,16 +385,53 @@ export const getActions = (meta, event) => [
 
     /**
      * Send message to Telegram channel
-     * Usage: <sendToTelegram>{"message": "Hello!", "silent": false}</sendToTelegram>
+     * Usage: <sendToTelegramChannel>{"message": "Hello!", "parse_mode": "Markdown", "silent": false}</sendToTelegramChannel>
      */
-    [/<sendToTelegram>([\s\S]*?)<\/sendToTelegram>/s, async (match) => {
+    [/<sendToTelegramChannel>([\s\S]*?)<\/sendToTelegramChannel>/s, async (match) => {
         try {
             const data = JSON.parse(match[1].trim());
-            const result = await sendToTelegram(data.message, { silent: data.silent });
+            const result = await sendToTelegramChannel(data.message, {
+                parse_mode: data.parse_mode || 'Markdown',
+                silent: data.silent || false
+            });
 
             if (result.success) {
                 return {
                     type: "TELEGRAM_SENT",
+                    messageId: result.messageId,
+                    ...meta,
+                    _meta_actions: ["REQUEST_CHAT_MODEL"]
+                };
+            } else {
+                return {
+                    type: "TELEGRAM_ERROR",
+                    error: result.error,
+                    ...meta,
+                    _meta_actions: ["REQUEST_CHAT_MODEL"]
+                };
+            }
+        } catch (e) {
+            return {
+                type: "TELEGRAM_ERROR",
+                error: e.message,
+                ...meta,
+                _meta_actions: ["REQUEST_CHAT_MODEL"]
+            };
+        }
+    }],
+
+    /**
+     * Send photo to Telegram channel
+     * Usage: <sendPhotoToTelegramChannel>{"photoUrl": "https://...", "caption": "Description"}</sendPhotoToTelegramChannel>
+     */
+    [/<sendPhotoToTelegramChannel>([\s\S]*?)<\/sendPhotoToTelegramChannel>/s, async (match) => {
+        try {
+            const data = JSON.parse(match[1].trim());
+            const result = await sendPhotoToTelegramChannel(data.photoUrl, data.caption || '');
+
+            if (result.success) {
+                return {
+                    type: "TELEGRAM_PHOTO_SENT",
                     messageId: result.messageId,
                     ...meta,
                     _meta_actions: ["REQUEST_CHAT_MODEL"]
