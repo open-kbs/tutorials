@@ -3,6 +3,19 @@ import crypto from 'crypto';
 
 const BOT_TOKEN = '{{secrets.telegramBotToken}}';
 
+const AUTONOMOUS_CHAT_RULES = `**CRITICAL - Autonomous Chat Execution Rules:**
+
+This chat has NO USER listening. You MUST follow these rules:
+
+1. **ONLY output commands** - Do NOT write explanatory text
+2. **Every message MUST contain at least one command** (sendTelegram, createAIImage, etc.)
+3. **If you output plain text, the chat STOPS immediately**
+4. **The ONLY allowed plain text is "END"** - to pass or end the chat
+5. **To communicate with user**: Use sendTelegram command
+6. **All tool results stay in this chat as logs** - user never sees them
+
+REMEMBER: Commands only. Plain text = chat stops.`;
+
 // Helper: upsert agent setting
 async function setAgentSetting(itemId, value) {
     const body = { value, updatedAt: new Date().toISOString() };
@@ -198,9 +211,18 @@ export const handler = async ({ payload, queryStringParameters, headers }) => {
             });
 
             // Create chat for agent to process
+            const telegramMessage = `PROCESS_TELEGRAM_MESSAGE from ${senderName}
+
+${senderName} wrote:
+"""
+${text}
+"""
+
+${AUTONOMOUS_CHAT_RULES}`;
+
             await openkbs.chats({
                 chatTitle: `TG: ${senderName}`,
-                message: `[TELEGRAM] From ${senderName}:\n\n${text}`
+                message: telegramMessage
             });
 
             return { ok: true, processed: 'channel_post', messageId };
