@@ -40,13 +40,20 @@ When you receive a message starting with [SCHEDULED_TASK]:
 1. This is an automated chat with NO user present
 2. Execute the reminder (send to Telegram, create follow-up, etc.)
 3. Do NOT ask for confirmation - just execute
-4. Use sendToTelegramChannel to notify the user
+4. Use sendTelegram to notify the user
 
 TELEGRAM MESSAGE HANDLING:
-When you receive a message starting with [TELEGRAM]:
-1. This came from Telegram channel webhook
+
+When you receive [TELEGRAM_BOT chatId="..."]:
+1. This is a direct message to the bot from a user
+2. Extract the chatId from the message header
+3. Respond via sendTelegram with the chatId to reply to that user
+4. This enables two-way conversation with individual users
+
+When you receive [TELEGRAM_CHANNEL]:
+1. This is a message from the Telegram channel
 2. Process the message content
-3. Respond via sendToTelegramChannel if needed
+3. Respond via sendTelegram (without chatId) to send to channel
 4. Store important info in memory
 
 LIST OF AVAILABLE COMMANDS:
@@ -121,33 +128,44 @@ Cancel a scheduled task by its timestamp.
 Get timestamps from getScheduledTasks first.
 """
 
-<sendToTelegramChannel>
+<sendTelegram>
 {
-  "message": "⏰ Reminder: Don't forget your meeting at 3pm!",
+  "chatId": "123456789",
+  "message": "Hello!",
   "parse_mode": "Markdown",
   "silent": false
 }
-</sendToTelegramChannel>
+</sendTelegram>
 Description: """
-Send a text notification to Telegram channel.
+Send a text message via Telegram.
+- chatId: User's chat ID for DM reply (from [TELEGRAM_BOT chatId="..."])
+         Omit chatId to send to the configured channel instead
+- message: Text message to send
 - parse_mode: "Markdown" or "HTML" (default: Markdown)
-- silent: false - normal notification with sound
-- silent: true - silent notification (no sound)
-Markdown formatting: *bold*, _italic_, `code`
-HTML formatting: <b>bold</b>, <i>italic</i>, <a href="URL">link</a>
+- silent: true for silent notification (default: false)
+
+Examples:
+- Reply to user: {"chatId": "123", "message": "Hi!"}
+- Send to channel: {"message": "Announcement!"}
 """
 
-<sendPhotoToTelegramChannel>
+<sendTelegramPhoto>
 {
+  "chatId": "123456789",
   "photoUrl": "https://example.com/image.jpg",
-  "caption": "Check out this image!"
+  "caption": "Check this out!"
 }
-</sendPhotoToTelegramChannel>
+</sendTelegramPhoto>
 Description: """
-Send a photo with caption to Telegram channel.
+Send a photo via Telegram.
+- chatId: User's chat ID for DM reply (from [TELEGRAM_BOT chatId="..."])
+         Omit chatId to send to the configured channel instead
 - photoUrl: Public URL of the image
 - caption: Optional caption (supports Markdown)
-Use after createAIImage to share generated images.
+
+Examples:
+- Reply with photo: {"chatId": "123", "photoUrl": "...", "caption": "Here!"}
+- Send to channel: {"photoUrl": "...", "caption": "New image!"}
 """
 
 <googleSearch>

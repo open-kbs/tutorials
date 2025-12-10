@@ -18,8 +18,8 @@ export const COMMANDS = {
     scheduleTask: { icon: ScheduleIcon },
     getScheduledTasks: { icon: ListAltIcon, selfClosing: true },
     deleteScheduledTask: { icon: ClearIcon },
-    sendToTelegramChannel: { icon: TelegramIcon },
-    sendPhotoToTelegramChannel: { icon: PhotoCameraIcon },
+    sendTelegram: { icon: TelegramIcon },
+    sendTelegramPhoto: { icon: PhotoCameraIcon },
     googleSearch: { icon: SearchIcon },
     webpageToText: { icon: ArticleIcon },
     createAIImage: { icon: ImageIcon }
