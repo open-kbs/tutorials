@@ -1,6 +1,6 @@
-# Reminder Agent
+# Telegram Agent
 
-Personal reminder agent with Telegram integration. Built as a complete tutorial example for OpenKBS.
+AI-powered Telegram agent. Built as a complete tutorial example for OpenKBS.
 
 ## Features
 
@@ -15,7 +15,7 @@ Personal reminder agent with Telegram integration. Built as a complete tutorial 
 
 ```bash
 # Clone or copy this agent
-cd reminder-agent
+cd telegram-agent
 
 # Install dependencies
 npm install
@@ -71,7 +71,8 @@ openkbs push
 
 ### Telegram
 ```
-<sendToTelegram>{"message": "Hello!", "silent": false}</sendToTelegram>
+<sendTelegram>{"message": "Hello!", "silent": false}</sendTelegram>
+<sendTelegramPhoto>{"photoUrl": "https://...", "caption": "Check this!"}</sendTelegramPhoto>
 ```
 
 ### Search & Content
@@ -88,7 +89,7 @@ openkbs push
 ## Project Structure
 
 ```
-reminder-agent/
+telegram-agent/
 ├── app/
 │   ├── settings.json      # Agent config, itemTypes
 │   ├── instructions.txt   # System prompt

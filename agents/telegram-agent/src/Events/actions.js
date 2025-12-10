@@ -1,4 +1,4 @@
-// Reminder Agent - Backend Actions
+// Telegram Agent - Backend Actions
 // All command implementations with proper error handling
 
 // ============================================================================
