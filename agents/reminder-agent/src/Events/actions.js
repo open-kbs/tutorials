@@ -101,22 +101,13 @@ async function getTelegramChannelId() {
     return channelId;
 }
 
-/**
- * Send text message to Telegram (bot DM or channel)
- * @param {string|null} chatId - User's chatId for DM, or null/undefined for channel
- * @param {string} message - Text message
- * @param {object} options - { parse_mode, silent }
- */
-async function sendTelegramMessage(chatId, message, options = {}) {
-    // If no chatId provided, use channel
-    if (!chatId) {
-        chatId = await getTelegramChannelId();
-        if (!chatId) {
-            return {
-                success: false,
-                error: 'Telegram channel not configured. Send a message to your channel first to auto-configure, or set telegramChannelID secret.'
-            };
-        }
+async function sendTelegram(message, options = {}) {
+    const channelId = await getTelegramChannelId();
+    if (!channelId) {
+        return {
+            success: false,
+            error: 'Telegram channel not configured. Send a message to your channel first to auto-configure, or set telegramChannelID secret.'
+        };
     }
 
     try {
@@ -124,7 +115,7 @@ async function sendTelegramMessage(chatId, message, options = {}) {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                chat_id: chatId,
+                chat_id: channelId,
                 text: message,
                 parse_mode: options.parse_mode || 'Markdown',
                 disable_notification: options.silent || false
@@ -132,7 +123,6 @@ async function sendTelegramMessage(chatId, message, options = {}) {
         });
 
         const data = await response.json();
-
         if (data.ok) {
             return { success: true, messageId: data.result.message_id };
         }
@@ -142,22 +132,13 @@ async function sendTelegramMessage(chatId, message, options = {}) {
     }
 }
 
-/**
- * Send photo to Telegram (bot DM or channel)
- * @param {string|null} chatId - User's chatId for DM, or null/undefined for channel
- * @param {string} photoUrl - URL of the photo
- * @param {string} caption - Optional caption
- */
-async function sendTelegramPhoto(chatId, photoUrl, caption = '') {
-    // If no chatId provided, use channel
-    if (!chatId) {
-        chatId = await getTelegramChannelId();
-        if (!chatId) {
-            return {
-                success: false,
-                error: 'Telegram channel not configured.'
-            };
-        }
+async function sendTelegramPhoto(photoUrl, caption = '') {
+    const channelId = await getTelegramChannelId();
+    if (!channelId) {
+        return {
+            success: false,
+            error: 'Telegram channel not configured.'
+        };
     }
 
     try {
@@ -165,7 +146,7 @@ async function sendTelegramPhoto(chatId, photoUrl, caption = '') {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                chat_id: chatId,
+                chat_id: channelId,
                 photo: photoUrl,
                 caption: caption,
                 parse_mode: 'Markdown'
@@ -173,7 +154,6 @@ async function sendTelegramPhoto(chatId, photoUrl, caption = '') {
         });
 
         const data = await response.json();
-
         if (data.ok) {
             return { success: true, messageId: data.result.message_id };
         }
@@ -400,77 +380,39 @@ export const getActions = (meta, event) => [
     // =========================================================================
 
     /**
-     * Send message to Telegram (DM or channel)
-     * Usage: <sendTelegram>{"chatId": "123", "message": "Hello!"}</sendTelegram>
-     * If chatId is omitted, sends to configured channel
+     * Send message to Telegram channel
+     * Usage: <sendTelegram>{"message": "Hello!"}</sendTelegram>
      */
     [/<sendTelegram>([\s\S]*?)<\/sendTelegram>/s, async (match) => {
         try {
             const data = JSON.parse(match[1].trim());
-            const result = await sendTelegramMessage(data.chatId, data.message, {
+            const result = await sendTelegram(data.message, {
                 parse_mode: data.parse_mode || 'Markdown',
                 silent: data.silent || false
             });
 
-            if (result.success) {
-                return {
-                    type: "TELEGRAM_SENT",
-                    messageId: result.messageId,
-                    chatId: data.chatId || 'channel',
-                    ...meta,
-                    _meta_actions: ["REQUEST_CHAT_MODEL"]
-                };
-            } else {
-                return {
-                    type: "TELEGRAM_ERROR",
-                    error: result.error,
-                    ...meta,
-                    _meta_actions: ["REQUEST_CHAT_MODEL"]
-                };
-            }
+            return result.success
+                ? { type: "TELEGRAM_SENT", messageId: result.messageId, ...meta, _meta_actions: ["REQUEST_CHAT_MODEL"] }
+                : { type: "TELEGRAM_ERROR", error: result.error, ...meta, _meta_actions: ["REQUEST_CHAT_MODEL"] };
         } catch (e) {
-            return {
-                type: "TELEGRAM_ERROR",
-                error: e.message,
-                ...meta,
-                _meta_actions: ["REQUEST_CHAT_MODEL"]
-            };
+            return { type: "TELEGRAM_ERROR", error: e.message, ...meta, _meta_actions: ["REQUEST_CHAT_MODEL"] };
         }
     }],
 
     /**
-     * Send photo to Telegram (DM or channel)
-     * Usage: <sendTelegramPhoto>{"chatId": "123", "photoUrl": "https://...", "caption": "Hi"}</sendTelegramPhoto>
-     * If chatId is omitted, sends to configured channel
+     * Send photo to Telegram channel
+     * Usage: <sendTelegramPhoto>{"photoUrl": "https://...", "caption": "Hi"}</sendTelegramPhoto>
      */
     [/<sendTelegramPhoto>([\s\S]*?)<\/sendTelegramPhoto>/s, async (match) => {
         try {
             const data = JSON.parse(match[1].trim());
-            const result = await sendTelegramPhoto(data.chatId, data.photoUrl, data.caption || '');
+            const result = await sendTelegramPhoto(data.photoUrl, data.caption || '');
 
-            if (result.success) {
-                return {
-                    type: "TELEGRAM_PHOTO_SENT",
-                    messageId: result.messageId,
-                    chatId: data.chatId || 'channel',
-                    ...meta,
-                    _meta_actions: ["REQUEST_CHAT_MODEL"]
-                };
-            } else {
-                return {
-                    type: "TELEGRAM_ERROR",
-                    error: result.error,
-                    ...meta,
-                    _meta_actions: ["REQUEST_CHAT_MODEL"]
-                };
-            }
+            return result.success
+                ? { type: "TELEGRAM_PHOTO_SENT", messageId: result.messageId, ...meta, _meta_actions: ["REQUEST_CHAT_MODEL"] }
+                : { type: "TELEGRAM_ERROR", error: result.error, ...meta, _meta_actions: ["REQUEST_CHAT_MODEL"] };
         } catch (e) {
-            return {
-                type: "TELEGRAM_ERROR",
-                error: e.message,
-                ...meta,
-                _meta_actions: ["REQUEST_CHAT_MODEL"]
-            };
+            return { type: "TELEGRAM_ERROR", error: e.message, ...meta, _meta_actions: ["REQUEST_CHAT_MODEL"] };
         }
     }],
 
