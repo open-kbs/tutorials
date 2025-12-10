@@ -85,7 +85,7 @@ export const handler = async ({ payload, queryStringParameters, headers }) => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     url: WEBHOOK_URL,
-                    allowed_updates: ['channel_post'],
+                    allowed_updates: ['message', 'channel_post'],
                     drop_pending_updates: true,
                     secret_token: SECRET_TOKEN
                 })
