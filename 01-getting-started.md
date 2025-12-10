@@ -17,14 +17,14 @@ openkbs --version
 ## 1.2 Create Your Agent
 
 ```bash
-openkbs create reminder-agent
-cd reminder-agent
+openkbs create telegram-agent
+cd telegram-agent
 ```
 
 This creates the following structure:
 
 ```
-reminder-agent/
+telegram-agent/
 ├── app/
 │   ├── settings.json      # Agent configuration
 │   ├── instructions.txt   # System prompt for the LLM

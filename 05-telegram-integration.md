@@ -67,6 +67,19 @@ import crypto from 'crypto';
 
 const BOT_TOKEN = '{{secrets.telegramBotToken}}';
 
+const AUTONOMOUS_CHAT_RULES = `**CRITICAL - Autonomous Chat Execution Rules:**
+
+This chat has NO USER listening. You MUST follow these rules:
+
+1. **ONLY output commands** - Do NOT write explanatory text
+2. **Every message MUST contain at least one command** (sendTelegram, createAIImage, etc.)
+3. **If you output plain text, the chat STOPS immediately**
+4. **The ONLY allowed plain text is "END"** - to pass or end the chat
+5. **To communicate with user**: Use sendTelegram command
+6. **All tool results stay in this chat as logs** - user never sees them
+
+REMEMBER: Commands only. Plain text = chat stops.`;
+
 // Helper functions
 async function setAgentSetting(itemId, value) {
     const body = { value, updatedAt: new Date().toISOString() };
@@ -233,39 +246,22 @@ export const handler = async ({ payload, queryStringParameters, headers }) => {
                 date: post.date, type: 'channel'
             });
 
-            // Create chat for agent
+            // Create chat for agent with autonomous rules
+            const telegramMessage = `PROCESS_TELEGRAM_MESSAGE from ${senderName}
+
+${senderName} wrote:
+"""
+${text}
+"""
+
+${AUTONOMOUS_CHAT_RULES}`;
+
             await openkbs.chats({
                 chatTitle: `TG: ${senderName}`,
-                message: `[TELEGRAM] From ${senderName}:\n\n${text}`
+                message: telegramMessage
             });
 
             return { ok: true, processed: 'channel_post' };
-        }
-
-        // Handle direct messages
-        if (payload?.message) {
-            const msg = payload.message;
-            const text = msg.text || '';
-            const messageId = msg.message_id;
-            const userName = msg.from?.username || msg.from?.first_name || 'User';
-
-            if (await getTelegramMessage(messageId)) {
-                return { ok: true, duplicate: true };
-            }
-
-            await storeTelegramMessage(messageId, {
-                text, from: userName,
-                chatId: msg.chat.id,
-                userId: msg.from?.id,
-                date: msg.date, type: 'direct'
-            });
-
-            await openkbs.chats({
-                chatTitle: `TG DM: ${userName}`,
-                message: `[TELEGRAM_DM] From ${userName}:\n\n${text}`
-            });
-
-            return { ok: true, processed: 'message' };
         }
 
         return { ok: true };
@@ -284,19 +280,23 @@ export const handler = async ({ payload, queryStringParameters, headers }) => {
 }
 ```
 
-## 5.6 Send to Telegram Command
+## 5.6 Send to Telegram Commands
 
 Add to `src/Events/actions.js`:
 
 ```javascript
 const TELEGRAM_BOT_TOKEN = '{{secrets.telegramBotToken}}';
 
-async function sendToTelegram(message, options = {}) {
+async function getTelegramChannelId() {
     let channelId = '{{secrets.telegramChannelID}}';
     if (!channelId || channelId.includes('{{')) {
         channelId = await getAgentSetting('agent_telegramChannelID');
     }
+    return channelId;
+}
 
+async function sendTelegram(message, options = {}) {
+    const channelId = await getTelegramChannelId();
     if (!channelId) {
         return { success: false, error: 'Channel not configured' };
     }
@@ -309,7 +309,7 @@ async function sendToTelegram(message, options = {}) {
             body: JSON.stringify({
                 chat_id: channelId,
                 text: message,
-                parse_mode: 'Markdown',
+                parse_mode: options.parse_mode || 'Markdown',
                 disable_notification: options.silent || false
             })
         }
@@ -321,42 +321,113 @@ async function sendToTelegram(message, options = {}) {
         : { success: false, error: data.description };
 }
 
+async function sendTelegramPhoto(photoUrl, caption = '') {
+    const channelId = await getTelegramChannelId();
+    if (!channelId) {
+        return { success: false, error: 'Channel not configured' };
+    }
+
+    const response = await fetch(
+        `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`,
+        {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: channelId,
+                photo: photoUrl,
+                caption: caption,
+                parse_mode: 'Markdown'
+            })
+        }
+    );
+
+    const data = await response.json();
+    return data.ok
+        ? { success: true, messageId: data.result.message_id }
+        : { success: false, error: data.description };
+}
+
 // In getActions array:
-[/<sendToTelegram>([\s\S]*?)<\/sendToTelegram>/s, async (match) => {
+[/<sendTelegram>([\s\S]*?)<\/sendTelegram>/s, async (match) => {
     try {
         const data = JSON.parse(match[1].trim());
-        const result = await sendToTelegram(data.message, { silent: data.silent });
+        const result = await sendTelegram(data.message, {
+            parse_mode: data.parse_mode || 'Markdown',
+            silent: data.silent || false
+        });
 
-        if (result.success) {
-            return {
-                type: "TELEGRAM_SENT",
-                messageId: result.messageId,
-                ...meta,
-                _meta_actions: ["REQUEST_CHAT_MODEL"]
-            };
-        }
-        return { type: "TELEGRAM_ERROR", error: result.error, ...meta };
+        return result.success
+            ? { type: "TELEGRAM_SENT", messageId: result.messageId, ...meta, _meta_actions: ["REQUEST_CHAT_MODEL"] }
+            : { type: "TELEGRAM_ERROR", error: result.error, ...meta, _meta_actions: ["REQUEST_CHAT_MODEL"] };
     } catch (e) {
-        return { type: "ERROR", error: e.message, ...meta };
+        return { type: "TELEGRAM_ERROR", error: e.message, ...meta, _meta_actions: ["REQUEST_CHAT_MODEL"] };
+    }
+}],
+
+[/<sendTelegramPhoto>([\s\S]*?)<\/sendTelegramPhoto>/s, async (match) => {
+    try {
+        const data = JSON.parse(match[1].trim());
+        const result = await sendTelegramPhoto(data.photoUrl, data.caption || '');
+
+        return result.success
+            ? { type: "TELEGRAM_PHOTO_SENT", messageId: result.messageId, ...meta, _meta_actions: ["REQUEST_CHAT_MODEL"] }
+            : { type: "TELEGRAM_ERROR", error: result.error, ...meta, _meta_actions: ["REQUEST_CHAT_MODEL"] };
+    } catch (e) {
+        return { type: "TELEGRAM_ERROR", error: e.message, ...meta, _meta_actions: ["REQUEST_CHAT_MODEL"] };
     }
 }],
 ```
 
 ## 5.7 Define in Instructions
 
-```text
-## Telegram
+Add to `app/instructions.txt`:
 
-<sendToTelegram>
+```text
+## EVENT TYPES
+
+PROCESS_TELEGRAM_MESSAGE - User message from Telegram (autonomous chat, commands only, respond via sendTelegram)
+[SCHEDULED_TASK] - Reminder fired (autonomous chat, commands only, send via sendTelegram)
+No prefix - Direct chat with human user (respond normally)
+
+## Telegram Commands
+
+<sendTelegram>
 {
   "message": "Don't forget: Meeting at 3pm!",
   "silent": false
 }
-</sendToTelegram>
-Description: Send notification to Telegram. silent: true for no sound.
+</sendTelegram>
+
+Send text message to Telegram channel.
+- message: Supports Markdown (*bold*, _italic_, `code`)
+- silent: true for silent notification (default: false)
+
+---
+
+<sendTelegramPhoto>
+{
+  "photoUrl": "https://example.com/image.jpg",
+  "caption": "Check this out!"
+}
+</sendTelegramPhoto>
+
+Send photo to Telegram channel.
+- photoUrl: Public URL of the image
+- caption: Optional, supports Markdown
 ```
 
-## 5.8 Deploy and Setup
+## 5.8 How Autonomous Chats Work
+
+When a message arrives from Telegram, the webhook creates a new chat with `AUTONOMOUS_CHAT_RULES` appended. These rules tell the LLM:
+
+1. **No user is listening** - this chat is automated
+2. **Only output commands** - plain text stops the chat immediately
+3. **Use sendTelegram to reply** - that's how users see responses
+4. **Output "END" when done** - to cleanly terminate
+
+This prevents the LLM from "talking to itself" or generating fake user messages.
+
+## 5.9 Deploy and Setup
 
 ```bash
 openkbs push
@@ -378,12 +449,12 @@ You should see:
 }
 ```
 
-## 5.9 Test Integration
+## 5.10 Test Integration
 
 1. **Send from agent**: Ask "Send a test message to Telegram"
 2. **Receive in agent**: Send a message to your Telegram channel - a new chat should appear in your agent
 
-## 5.10 Removing Webhook
+## 5.11 Removing Webhook
 
 If you need to reconfigure:
 ```
@@ -395,13 +466,13 @@ https://chat.openkbs.com/publicAPIRequest?kbId=YOUR_KB_ID&removeTelegramWebhook=
 - Created Telegram bot via @BotFather
 - Added `telegramBotToken` secret
 - Added `telegram` itemType to settings.json
-- Created `onPublicAPIRequest.js` for webhook handling
+- Created `onPublicAPIRequest.js` with `AUTONOMOUS_CHAT_RULES`
 - Setup webhook with `?setupTelegramWebhook=true`
-- Messages from Telegram create new chats
-- Agent can send notifications via `sendToTelegram` command
+- Telegram messages trigger autonomous chats with strict rules
+- Agent responds via `sendTelegram` command, ends with "END"
 
 ## Next Steps
 
 Continue to [Tutorial 6: Frontend Rendering](./06-frontend-rendering.md) to learn how to customize the chat UI - display commands as icons, show images with download buttons, and more.
 
-The complete code is in [agents/reminder-agent/](./agents/reminder-agent/).
+The complete code is in [agents/telegram-agent/](./agents/telegram-agent/).

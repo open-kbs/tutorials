@@ -1,6 +1,6 @@
 # OpenKBS Tutorials
 
-Build AI agents from zero to production. This step-by-step tutorial series guides you through creating a fully-functional Reminder Agent with Telegram integration.
+Build AI agents from zero to production. This step-by-step tutorial series guides you through creating a fully-functional Telegram Agent.
 
 ## Prerequisites
 
@@ -10,7 +10,7 @@ Build AI agents from zero to production. This step-by-step tutorial series guide
 
 ## What You'll Build
 
-By the end of this series, you'll have a working **Reminder Agent** that can:
+By the end of this series, you'll have a working **Telegram Agent** that can:
 
 - Store persistent data (memory system)
 - Schedule future reminders
@@ -36,8 +36,8 @@ By the end of this series, you'll have a working **Reminder Agent** that can:
 npm install -g openkbs
 
 # Create agent
-openkbs create reminder-agent
-cd reminder-agent
+openkbs create telegram-agent
+cd telegram-agent
 
 # Login and deploy
 openkbs login
@@ -46,12 +46,12 @@ openkbs push
 
 ## Complete Agent Code
 
-The finished agent code is available in [agents/reminder-agent/](./agents/reminder-agent/).
+The finished agent code is available in [agents/telegram-agent/](./agents/telegram-agent/).
 
 You can copy it directly:
 
 ```bash
-cp -r tutorials/agents/reminder-agent my-agent
+cp -r tutorials/agents/telegram-agent my-agent
 cd my-agent
 openkbs push
 ```

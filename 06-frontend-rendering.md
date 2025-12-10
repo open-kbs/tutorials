@@ -49,7 +49,8 @@ export const COMMANDS = {
     scheduleTask: { icon: ScheduleIcon },
     getScheduledTasks: { icon: ListAltIcon, selfClosing: true },
     deleteScheduledTask: { icon: ClearIcon },
-    sendToTelegram: { icon: TelegramIcon },
+    sendTelegram: { icon: TelegramIcon },
+    sendTelegramPhoto: { icon: PhotoCameraIcon },
     googleSearch: { icon: SearchIcon },
     webpageToText: { icon: ArticleIcon },
     createAIImage: { icon: ImageIcon }
@@ -563,4 +564,4 @@ This helps troubleshoot rendering issues by showing all messages without custom 
 
 ## Complete Agent
 
-The complete frontend code is in [agents/reminder-agent/src/Frontend/](./agents/reminder-agent/src/Frontend/).
+The complete frontend code is in [agents/telegram-agent/src/Frontend/](./agents/telegram-agent/src/Frontend/).
