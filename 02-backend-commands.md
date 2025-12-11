@@ -232,9 +232,11 @@ When `createAIImage` executes, it returns:
 }
 ```
 
-To render this image in the chat, update `src/Frontend/contentRender.js`:
+To render this image in the chat, update `src/Frontend/contentRender.js` (building on the react-markdown setup from Tutorial 1):
 
 ```javascript
+import ReactMarkdown from 'react-markdown';
+
 const onRenderChatMessage = async (params) => {
     const { content } = params.messages[params.msgIndex];
 
@@ -253,10 +255,10 @@ const onRenderChatMessage = async (params) => {
             );
         }
     } catch (e) {
-        // Not JSON, render as text
+        // Not JSON - render as markdown
     }
 
-    return null; // Use default rendering
+    return <ReactMarkdown>{content}</ReactMarkdown>;
 };
 
 ```
