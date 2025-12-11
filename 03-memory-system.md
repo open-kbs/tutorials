@@ -252,9 +252,7 @@ console.log(result.item.body.value); // 'Jane'
 const items = await openkbs.fetchItems({
     itemType: 'memory',
     beginsWith: 'memory_',
-    limit: 100,
-    sortBy: 'createdAt',
-    sortOrder: 'desc'
+    limit: 100
 });
 
 for (const { item, meta } of items.items) {
@@ -268,39 +266,7 @@ for (const { item, meta } of items.items) {
 await openkbs.deleteItem('memory_user_name');
 ```
 
-## 3.7 Memory Patterns
-
-### User Profile
-
-```javascript
-// Single item for all user data
-memory_user_profile: {
-    name: "John",
-    email: "john@example.com",
-    preferences: { theme: "dark", notifications: true }
-}
-```
-
-### Session State (with TTL)
-
-```javascript
-// Temporary data that expires
-memory_current_task: {
-    taskId: "task-123",
-    status: "in_progress",
-    exp: "2024-12-10T15:00:00Z"  // Auto-cleanup
-}
-```
-
-### Agent Settings
-
-```javascript
-// Configuration that persists
-agent_telegramChannelID: "-1001234567890"
-agent_lastProcessed: "2024-12-10T10:30:00Z"
-```
-
-## 3.8 Deploy and Test
+## 3.7 Deploy and Test
 
 ```bash
 openkbs push
