@@ -220,22 +220,45 @@ Description: Generate an AI image. Aspect ratios: 1:1, 16:9, 9:16, 4:3.
 You can use multiple commands at once - they execute in parallel.
 ```
 
-## 2.9 NPM Dependencies
+## 2.9 Rendering Command Results
 
-Add backend dependencies in handler JSON files:
+When `createAIImage` executes, it returns:
 
 ```json
-// src/Events/onResponse.json
 {
-  "dependencies": {
-    "axios": "^1.6.0"
-  }
+  "type": "CHAT_IMAGE",
+  "data": { "imageUrl": "https://file.openkbs.com/files/.../image.png" },
+  "_meta_actions": []
 }
 ```
 
-Use in actions.js:
+To render this image in the chat, update `src/Frontend/contentRender.js`:
+
 ```javascript
-import axios from 'axios';
+const onRenderChatMessage = async (params) => {
+    const { content } = params.messages[params.msgIndex];
+
+    // Try to parse as JSON command result
+    try {
+        const parsed = JSON.parse(content);
+
+        // Render CHAT_IMAGE
+        if (parsed.type === 'CHAT_IMAGE' && parsed.data?.imageUrl) {
+            return (
+                <img
+                    src={parsed.data.imageUrl}
+                    alt="Generated image"
+                    style={{ maxWidth: '100%', borderRadius: 8 }}
+                />
+            );
+        }
+    } catch (e) {
+        // Not JSON, render as text
+    }
+
+    return null; // Use default rendering
+};
+
 ```
 
 ## 2.10 Deploy and Test
@@ -244,9 +267,9 @@ import axios from 'axios';
 openkbs push
 ```
 
-Test by asking: "Search for the weather in Tokyo"
+Test by asking: "Generate an image of a sunset over mountains"
 
-The agent should output `<googleSearch>` and process the results.
+The agent will execute `<createAIImage>` and display the generated image in chat.
 
 ## Summary
 
