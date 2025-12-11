@@ -1,35 +1,33 @@
-// Cronjob handler - runs on schedule to cleanup expired items
+// Cronjob handler - runs on schedule
 
 export const handler = async (event) => {
-    console.log('Cronjob executed at:', new Date().toISOString());
+    const now = new Date();
 
-    // Cleanup expired memory items
     const result = await openkbs.fetchItems({
         beginsWith: 'memory_',
         limit: 100
     });
 
-    if (result?.items) {
-        const now = new Date();
-        let cleaned = 0;
+    let cleaned = 0;
+    const items = result?.items || [];
 
-        for (const item of result.items) {
-            if (item.item?.body?.exp) {
-                const expDate = new Date(item.item.body.exp);
-                if (expDate < now) {
-                    await openkbs.deleteItem(item.meta.itemId);
-                    cleaned++;
-                }
+    for (const item of items) {
+        if (item.item?.body?.exp) {
+            const expDate = new Date(item.item.body.exp);
+            if (expDate < now) {
+                await openkbs.deleteItem(item.meta.itemId);
+                cleaned++;
             }
-        }
-
-        if (cleaned > 0) {
-            console.log(`Cleaned ${cleaned} expired memory items`);
         }
     }
 
-    return { success: true };
+    await openkbs.chats({
+        chatTitle: `Cronjob - ${now.toISOString()}`,
+        message: `[SCHEDULED_TASK] Memory cleanup report. Total: ${items.length}, Expired deleted: ${cleaned}, Remaining: ${items.length - cleaned}. Send to Telegram.`
+    });
+
+    return { success: true, timestamp: now.toISOString(), items: items.length, cleaned };
 };
 
-// Run every hour at minute 0
-handler.CRON_SCHEDULE = "0 * * * *";
+// Run every minute for testing
+handler.CRON_SCHEDULE = "* * * * *";

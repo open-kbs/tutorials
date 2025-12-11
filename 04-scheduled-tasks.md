@@ -145,34 +145,35 @@ Run tasks on a schedule without user interaction.
 // src/Events/onCronjob.js
 
 export const handler = async (event) => {
-    console.log('Cronjob executed at:', new Date().toISOString());
+    const now = new Date();
 
-    // Example: Cleanup expired memory items
+    // Fetch all memory items
     const result = await openkbs.fetchItems({
         beginsWith: 'memory_',
         limit: 100
     });
 
-    if (result?.items) {
-        const now = new Date();
-        let cleaned = 0;
+    let cleaned = 0;
+    const items = result?.items || [];
 
-        for (const item of result.items) {
-            if (item.item?.body?.exp) {
-                const expDate = new Date(item.item.body.exp);
-                if (expDate < now) {
-                    await openkbs.deleteItem(item.meta.itemId);
-                    cleaned++;
-                }
+    // Delete expired items
+    for (const item of items) {
+        if (item.item?.body?.exp) {
+            const expDate = new Date(item.item.body.exp);
+            if (expDate < now) {
+                await openkbs.deleteItem(item.meta.itemId);
+                cleaned++;
             }
-        }
-
-        if (cleaned > 0) {
-            console.log(`Cleaned ${cleaned} expired items`);
         }
     }
 
-    return { success: true };
+    // Send report to Telegram via chat
+    await openkbs.chats({
+        chatTitle: `Cronjob - ${now.toISOString()}`,
+        message: `[SCHEDULED_TASK] Memory cleanup report. Total: ${items.length}, Expired deleted: ${cleaned}, Remaining: ${items.length - cleaned}. Send to Telegram.`
+    });
+
+    return { success: true, timestamp: now.toISOString(), items: items.length, cleaned };
 };
 
 // Schedule: Run every hour at minute 0
@@ -209,42 +210,7 @@ handler.CRON_SCHEDULE = "0 * * * *";
 "0 */6 * * *"    // Every 6 hours
 ```
 
-## 4.3 Cronjob with Notifications
-
-Create a daily summary that sends to Telegram:
-
-```javascript
-export const handler = async (event) => {
-    // Get agent settings
-    const sendDaily = await getAgentSetting('agent_dailySummary');
-    if (!sendDaily) return { skipped: true };
-
-    // Collect data for summary
-    const tasks = await openkbs.kb({ action: 'getScheduledTasks' });
-    const memories = await openkbs.fetchItems({
-        beginsWith: 'memory_',
-        limit: 100
-    });
-
-    // Create chat to generate summary
-    await openkbs.chats({
-        chatTitle: 'Daily Summary',
-        message: JSON.stringify([{
-            type: "text",
-            text: `[DAILY_SUMMARY] Generate a daily summary.
-Pending tasks: ${tasks?.length || 0}
-Memory items: ${memories?.items?.length || 0}
-Send the summary to Telegram.`
-        }])
-    });
-
-    return { success: true };
-};
-
-handler.CRON_SCHEDULE = "0 9 * * *"; // Daily at 9 AM
-```
-
-## 4.4 Deploy and Test
+## 4.3 Deploy and Test
 
 ```bash
 openkbs push
