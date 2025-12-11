@@ -176,8 +176,8 @@ export const handler = async (event) => {
     return { success: true, timestamp: now.toISOString(), items: items.length, cleaned };
 };
 
-// Schedule: Run every hour at minute 0
-handler.CRON_SCHEDULE = "0 * * * *";
+// Run daily at 9 AM
+handler.CRON_SCHEDULE = "0 9 * * *";
 ```
 
 ### Create onCronjob.json

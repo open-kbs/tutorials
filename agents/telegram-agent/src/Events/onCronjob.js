@@ -29,5 +29,5 @@ export const handler = async (event) => {
     return { success: true, timestamp: now.toISOString(), items: items.length, cleaned };
 };
 
-// Run every minute for testing
-handler.CRON_SCHEDULE = "* * * * *";
+// Run daily at 9 AM
+handler.CRON_SCHEDULE = "0 9 * * *";
