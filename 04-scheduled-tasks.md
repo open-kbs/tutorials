@@ -147,33 +147,33 @@ Run tasks on a schedule without user interaction.
 export const handler = async (event) => {
     const now = new Date();
 
-    // Fetch all memory items
-    const result = await openkbs.fetchItems({
-        beginsWith: 'memory_',
-        limit: 100
-    });
-
+    // Cleanup expired memory items
     let cleaned = 0;
-    const items = result?.items || [];
+    try {
+        const result = await openkbs.fetchItems({
+            beginsWith: 'memory_',
+            limit: 100
+        });
 
-    // Delete expired items
-    for (const item of items) {
-        if (item.item?.body?.exp) {
-            const expDate = new Date(item.item.body.exp);
-            if (expDate < now) {
+        for (const item of result?.items || []) {
+            if (item.item?.body?.exp && new Date(item.item.body.exp) < now) {
                 await openkbs.deleteItem(item.meta.itemId);
                 cleaned++;
             }
         }
-    }
+    } catch (e) {}
 
-    // Send report to Telegram via chat
+    // Create morning briefing chat
     await openkbs.chats({
-        chatTitle: `Cronjob - ${now.toISOString()}`,
-        message: `[SCHEDULED_TASK] Memory cleanup report. Total: ${items.length}, Expired deleted: ${cleaned}, Remaining: ${items.length - cleaned}. Send to Telegram.`
+        chatTitle: `Morning Briefing - ${now.toISOString().split('T')[0]}`,
+        message: `[SCHEDULED_TASK] Create a morning briefing:
+1. Search for today's weather in the user's city (check memory for location)
+2. List any scheduled tasks for today
+3. Send a friendly morning summary to Telegram
+${cleaned > 0 ? `\nNote: Cleaned ${cleaned} expired memory items.` : ''}`
     });
 
-    return { success: true, timestamp: now.toISOString(), items: items.length, cleaned };
+    return { success: true, cleaned };
 };
 
 // Run daily at 9 AM
