@@ -116,21 +116,35 @@ Opens `http://localhost:38593` with hot-reload.
 
 **Note:** Backend changes require `openkbs push` to take effect.
 
-## 1.6 Your First Customization
+## 1.6 Extend Frontend
 
-Edit `app/instructions.txt`:
+Let's enhance your application with additional libraries and features.
+For example, to properly render chat messages with Markdown, you can integrate `react-markdown`:
 
-```text
-You are a helpful reminder assistant. Help users set reminders and manage their tasks.
+### Add react-markdown
 
-When a user asks to set a reminder, confirm the time and what to remind them about.
-```
+1. Add `react-markdown` to your dependencies:
 
-Deploy:
+   ```bash
+   openkbs contentRender i react-markdown
+   ```
 
-```bash
-openkbs push
-```
+2. Edit `./src/Frontend/contentRender.js` to use `react-markdown`:
+
+   ```js
+   import ReactMarkdown from 'react-markdown';
+
+   const onRenderChatMessage = async (params) => {
+       const { content } = params.messages[params.msgIndex];
+       return <ReactMarkdown>{content}</ReactMarkdown>;
+   };
+   ```
+``
+3. Ask the agent: "Write professional testing plan````"
+
+   You'll see the Markdown rendered with proper formatting - headers, bullet points, code blocks, etc.
+
+**Note:** Frontend changes are visible immediately with hot-reload. Backend changes require `openkbs push`.
 
 ## Summary
 
@@ -139,6 +153,7 @@ openkbs push
 - Deployed with `openkbs push`
 - Understood the message flow
 - Set up local development
+- Customized frontend with react-markdown
 
 ## Next
 
