@@ -101,6 +101,12 @@ async function getTelegramChannelId() {
     return channelId;
 }
 
+async function storeTelegramMessage(messageId, data) {
+    const itemId = `telegram_${messageId.toString().padStart(12, '0')}`;
+    const body = { ...data, storedAt: new Date().toISOString() };
+    await upsertItem('telegram', itemId, body);
+}
+
 async function sendTelegram(message, options = {}) {
     const channelId = await getTelegramChannelId();
     if (!channelId) {
@@ -124,6 +130,14 @@ async function sendTelegram(message, options = {}) {
 
         const data = await response.json();
         if (data.ok) {
+            // Store bot's own message (webhooks don't receive bot's own messages)
+            await storeTelegramMessage(data.result.message_id, {
+                text: message,
+                date: data.result.date,
+                type: 'bot_sent',
+                from: 'Bot',
+                chatId: channelId
+            });
             return { success: true, messageId: data.result.message_id };
         }
         return { success: false, error: data.description };
@@ -155,6 +169,15 @@ async function sendTelegramPhoto(photoUrl, caption = '') {
 
         const data = await response.json();
         if (data.ok) {
+            // Store bot's photo message
+            await storeTelegramMessage(data.result.message_id, {
+                text: `[Photo] ${caption}`,
+                photoUrl: photoUrl,
+                date: data.result.date,
+                type: 'bot_sent_photo',
+                from: 'Bot',
+                chatId: channelId
+            });
             return { success: true, messageId: data.result.message_id };
         }
         return { success: false, error: data.description };
