@@ -547,9 +547,9 @@ Now test your agent:
 
 ## 6.10 Debug Mode
 
-Add `?debug` to your agent URL to see raw message content:
+Add `?debug=1` to your agent URL to see raw message content:
 ```
-https://YOUR_KB_ID.apps.openkbs.com?debug
+https://YOUR_KB_ID.apps.openkbs.com?debug=1
 ```
 
 This helps troubleshoot rendering issues by showing all messages without custom rendering.
