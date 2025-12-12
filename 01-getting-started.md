@@ -139,8 +139,8 @@ For example, to properly render chat messages with Markdown, you can integrate `
        return <ReactMarkdown>{content}</ReactMarkdown>;
    };
    ```
-``
-3. Ask the agent: "Write professional testing plan````"
+
+3. Ask the agent: "Write professional testing plan"
 
    You'll see the Markdown rendered with proper formatting - headers, bullet points, code blocks, etc.
 
