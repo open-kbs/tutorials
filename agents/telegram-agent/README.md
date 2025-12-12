@@ -35,8 +35,9 @@ openkbs push
    - Copy the bot token (looks like `123456789:ABCdefGhIJKlmNOPQRstUVwxYZ`)
 
 2. **Add Secret**:
-   - Go to your agent settings in OpenKBS Console
-   - Add secret: `telegramBotToken` = your bot token
+   - Open your agent in OpenKBS Console
+   - Go to FileManager → Secrets (key icon)
+   - Add: `telegramBotToken` = your bot token
 
 3. **Create a Channel** (optional):
    - Create a Telegram channel
