@@ -39,10 +39,9 @@ openkbs push
    - Go to FileManager → Secrets (key icon)
    - Add: `telegramBotToken` = your bot token
 
-3. **Create a Channel** (optional):
-   - Create a Telegram channel
+3. **Create a Channel**:
+   - Create a private Telegram channel
    - Add your bot as administrator
-   - Add secret: `telegramChannelID` = your channel ID (or let it auto-detect)
 
 4. **Setup Webhook**:
    - After deploying, visit:
@@ -51,7 +50,9 @@ openkbs push
    ```
    - You should see "Webhook configured successfully"
 
-5. **Test**: Send a message to your channel - the agent will receive it!
+5. **Activate Channel**: Send a message to your channel - the channel ID will be auto-saved
+
+6. **Test**: Send another message - a new chat should appear in your agent!
 
 ## Available Commands
 

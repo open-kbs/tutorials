@@ -17,18 +17,10 @@ Connect your agent to Telegram for notifications and receiving messages.
 3. Go to **Secrets** section (click the Key Icon)
 4. Add: `telegramBotToken` = your bot token
 
-## 5.3 Create a Telegram Channel (Optional)
+## 5.3 Create a Telegram Channel
 
-If you want to receive messages from a channel:
-
-1. Create a new channel in Telegram
+1. Create a **private channel** in Telegram
 2. Add your bot as **administrator**
-3. Get channel ID:
-   - Send a message to the channel
-   - The ID will be auto-saved when you set up the webhook
-
-Or add secret manually:
-- `telegramChannelID` = your channel ID (e.g., `-1001234567890`)
 
 ## 5.4 Add telegram itemType
 
@@ -287,6 +279,24 @@ Add to `src/Events/actions.js`:
 ```javascript
 const TELEGRAM_BOT_TOKEN = '{{secrets.telegramBotToken}}';
 
+// Helper: get agent setting
+async function getAgentSetting(itemId) {
+    try {
+        const result = await openkbs.getItem(itemId);
+        return result?.item?.body?.value;
+    } catch (e) {
+        return null;
+    }
+}
+
+// Helper: set agent setting
+async function setAgentSetting(itemId, value) {
+    await upsertItem('agent', itemId, {
+        value,
+        updatedAt: new Date().toISOString()
+    });
+}
+
 async function getTelegramChannelId() {
     let channelId = '{{secrets.telegramChannelID}}';
     if (!channelId || channelId.includes('{{')) {
@@ -474,6 +484,8 @@ You should see:
   "webhookUrl": "https://chat.openkbs.com/publicAPIRequest?kbId=xxx&source=telegram"
 }
 ```
+
+**Important:** Send a message to your channel now - the channel ID will be auto-saved.
 
 ## 5.10 Test Integration
 
