@@ -13,6 +13,7 @@ Build AI agents from zero to production. This step-by-step tutorial series guide
 By the end of this series, you'll have a working **Telegram Agent** that can:
 
 - Store persistent data (memory system)
+- Archive historical data with semantic search (VectorDB)
 - Schedule future reminders
 - Send notifications via Telegram
 - Search the web and generate images
@@ -28,6 +29,7 @@ By the end of this series, you'll have a working **Telegram Agent** that can:
 | 4 | [Scheduled Tasks](./04-scheduled-tasks.md) | One-time reminders and cronjobs |
 | 5 | [Telegram Integration](./05-telegram-integration.md) | Webhook setup and notifications |
 | 6 | [Frontend Rendering](./06-frontend-rendering.md) | Custom UI for commands and images |
+| 7 | [Vector Memory](./07-vector-memory.md) | Long-term archive with semantic search |
 
 ## Quick Start
 

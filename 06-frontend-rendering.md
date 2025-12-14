@@ -563,6 +563,10 @@ This helps troubleshoot rendering issues by showing all messages without custom 
 - `contentRender.js` - Main rendering logic
 - `contentRender.json` - Declares MUI dependencies as `(fixed)`
 
+## Next
+
+[Tutorial 7: Vector Memory](./07-vector-memory.md) - Long-term archive with semantic search.
+
 ## Complete Agent
 
 The complete frontend code is in [agents/telegram-agent/src/Frontend/](./agents/telegram-agent/src/Frontend/).
