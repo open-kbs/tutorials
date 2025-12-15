@@ -235,6 +235,7 @@ When `createAIImage` executes, it returns:
 To render this image in the chat, update `src/Frontend/contentRender.js` (building on the react-markdown setup from Tutorial 1):
 
 ```javascript
+import React, { useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 
 const onRenderChatMessage = async (params) => {
