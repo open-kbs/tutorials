@@ -132,6 +132,7 @@ For example, to properly render chat messages with Markdown, you can integrate `
 2. Edit `./src/Frontend/contentRender.js` to use `react-markdown`:
 
    ```js
+   import React, { useEffect } from 'react';
    import ReactMarkdown from 'react-markdown';
 
    const onRenderChatMessage = async (params) => {
