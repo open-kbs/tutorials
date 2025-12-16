@@ -30,6 +30,7 @@ By the end of this series, you'll have a working **Telegram Agent** that can:
 | 5 | [Telegram Integration](./05-telegram-integration.md) | Webhook setup and notifications |
 | 6 | [Frontend Rendering](./06-frontend-rendering.md) | Custom UI for commands and images |
 | 7 | [Vector Memory](./07-vector-memory.md) | Long-term archive with semantic search |
+| 8 | [Deep Research](./08-deep-research.md) | Autonomous web research agent |
 
 ## Quick Start
 
