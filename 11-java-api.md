@@ -2,6 +2,25 @@
 
 Build a CRUD API with Java 25 and PostgreSQL.
 
+## What is OpenKBS Elastic?
+
+**OpenKBS Elastic** lets you deploy full-stack applications with zero infrastructure setup. Instead of configuring AWS, databases, and CDNs manually, you get production-ready services with simple CLI commands.
+
+| Service | What You Get | Used In This Tutorial |
+|---------|--------------|----------------------|
+| **Postgres** | PostgreSQL database (Neon) | Store items |
+| **Functions** | Serverless Lambda APIs | Java endpoint |
+
+```bash
+openkbs postgres enable    # Database ready in 10 seconds
+openkbs fn push api        # Deploy your API
+openkbs deploy             # Ship everything
+```
+
+> 📚 **Full documentation:** [Elastic Services Reference](/docs/elastic/)
+
+---
+
 ## Prerequisites
 
 ### 1. Create OpenKBS Account

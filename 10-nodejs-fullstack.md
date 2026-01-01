@@ -2,6 +2,28 @@
 
 Build a complete social app with posts, real-time updates, private chat, image uploads, and presence tracking.
 
+## What is OpenKBS Elastic?
+
+**OpenKBS Elastic** lets you deploy full-stack applications with zero infrastructure setup. Instead of configuring AWS, databases, and CDNs manually, you get production-ready services with simple CLI commands.
+
+| Service | What You Get | Used In This Tutorial |
+|---------|--------------|----------------------|
+| **Postgres** | PostgreSQL database (Neon) | Store users, posts, messages |
+| **Storage** | S3 bucket + CloudFront CDN | Image uploads |
+| **Functions** | Serverless Lambda APIs | Auth & Posts endpoints |
+| **Pulse** | Real-time WebSocket | Live updates, presence, chat |
+
+```bash
+openkbs postgres enable    # Database ready in 10 seconds
+openkbs storage enable     # S3 bucket with CDN
+openkbs fn push api        # Deploy your API
+openkbs deploy             # Ship everything
+```
+
+> 📚 **Full documentation:** [Elastic Services Reference](/docs/elastic/)
+
+---
+
 ## Prerequisites
 
 ### 1. Create OpenKBS Account

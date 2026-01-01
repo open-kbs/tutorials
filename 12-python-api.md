@@ -2,6 +2,27 @@
 
 Build a REST API with Python 3.13, PostgreSQL, and S3 file uploads.
 
+## What is OpenKBS Elastic?
+
+**OpenKBS Elastic** lets you deploy full-stack applications with zero infrastructure setup. Instead of configuring AWS, databases, and CDNs manually, you get production-ready services with simple CLI commands.
+
+| Service | What You Get | Used In This Tutorial |
+|---------|--------------|----------------------|
+| **Postgres** | PostgreSQL database (Neon) | Store items, media records |
+| **Storage** | S3 bucket + CloudFront CDN | File uploads |
+| **Functions** | Serverless Lambda APIs | Python endpoint |
+
+```bash
+openkbs postgres enable    # Database ready in 10 seconds
+openkbs storage enable     # S3 bucket with CDN
+openkbs fn push api        # Deploy your API
+openkbs deploy             # Ship everything
+```
+
+> 📚 **Full documentation:** [Elastic Services Reference](/docs/elastic/)
+
+---
+
 ## Prerequisites
 
 ### 1. Create OpenKBS Account
