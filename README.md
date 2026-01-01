@@ -33,6 +33,16 @@ By the end of this series, you'll have a working **Telegram Agent** that can:
 | 8 | [Deep Research](./08-deep-research.md) | Autonomous web research agent |
 | 9 | [MCP Integration](./09-mcp-integration.md) | Connect to external tools (Brave, GitHub, Slack) |
 
+### Elastic Services (Full-Stack Apps)
+
+| # | Tutorial | What You'll Learn |
+|---|----------|-------------------|
+| 10 | [Node.js Full-Stack](./10-nodejs-fullstack.md) | Social app with real-time chat, image uploads |
+| 11 | [Java REST API](./11-java-api.md) | CRUD API with PostgreSQL |
+| 12 | [Python API](./12-python-api.md) | API with file uploads to S3 |
+
+> **Reference:** For detailed documentation on Elastic services (Postgres, Storage, Functions, Pulse), see the [Elastic Reference Docs](https://github.com/open-kbs/openkbs/tree/main/elastic).
+
 ## Quick Start
 
 ```bash

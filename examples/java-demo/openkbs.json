@@ -1,0 +1,20 @@
+{
+  "name": "java-demo",
+  "region": "us-east-1",
+
+  "elastic": {
+    "postgres": true
+  },
+
+  "functions": [
+    {
+      "name": "api",
+      "runtime": "java25",
+      "handler": "com.example.Handler::handleRequest",
+      "memory": 512,
+      "timeout": 30
+    }
+  ],
+
+  "site": "./site"
+}

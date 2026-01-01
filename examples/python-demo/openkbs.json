@@ -1,0 +1,23 @@
+{
+  "name": "python-demo",
+  "region": "eu-central-1",
+
+  "elastic": {
+    "postgres": true,
+    "storage": {
+      "cloudfront": "media"
+    }
+  },
+
+  "functions": [
+    {
+      "name": "api",
+      "runtime": "python3.13",
+      "handler": "handler.main",
+      "memory": 256,
+      "timeout": 30
+    }
+  ],
+
+  "site": "./site"
+}
