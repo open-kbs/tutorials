@@ -331,8 +331,8 @@ curl -X POST https://your-kb.openkbs.com/api \
 
 ## Full Example
 
-See the complete project at [examples/java-demo](./examples/java-demo/).
+See the complete project at [github.com/open-kbs/tutorials/examples/java-demo](https://github.com/open-kbs/tutorials/tree/main/examples/java-demo).
 
 ## Next Steps
 
-- [Tutorial 12: Python API](./12-python-api.md)
+- [Tutorial 12: Python API](/tutorials/python-api/)

@@ -535,9 +535,9 @@ Each user has a unique `private_channel` (64-char hex). Only they know this chan
 
 ## Full Example
 
-See the complete project at [examples/nodejs-demo](./examples/nodejs-demo/).
+See the complete project at [github.com/open-kbs/tutorials/examples/nodejs-demo](https://github.com/open-kbs/tutorials/tree/main/examples/nodejs-demo).
 
 ## Next Steps
 
-- [Tutorial 11: Java REST API](./11-java-api.md)
-- [Tutorial 12: Python API](./12-python-api.md)
+- [Tutorial 11: Java REST API](/tutorials/java-api/)
+- [Tutorial 12: Python API](/tutorials/python-api/)

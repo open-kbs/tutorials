@@ -379,7 +379,7 @@ curl -X POST https://your-kb.openkbs.com/api \
 
 ## Full Example
 
-See the complete project at [examples/python-demo](./examples/python-demo/).
+See the complete project at [github.com/open-kbs/tutorials/examples/python-demo](https://github.com/open-kbs/tutorials/tree/main/examples/python-demo).
 
 ## Next Steps
 
