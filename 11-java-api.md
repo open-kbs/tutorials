@@ -7,7 +7,7 @@ Build a CRUD API with Java 25 and PostgreSQL.
 ### 1. Create OpenKBS Account
 
 1. Go to [openkbs.com](https://openkbs.com) and create your account
-2. Top up credits (minimum €5)
+2. Top up your account balance
 
 ### 2. Install White-Label Agent
 
@@ -15,19 +15,13 @@ Build a CRUD API with Java 25 and PostgreSQL.
 2. Find **"AI White Label"** agent and click **Install**
 3. Once installed, open the agent and go to **Platform Setup**
 
-### 3. Register and Connect Your Domain
-
-You need a custom domain. Cheap options (~€1/year):
-- `yourdomain.click`
-- `yourdomain.site`
-- `yourdomain.online`
-
-Register at [Namecheap](https://namecheap.com), [Porkbun](https://porkbun.com), or any registrar.
+### 3. Register Your Domain
 
 In **Platform Setup**:
-1. Enter your domain (e.g., `myapp.click`)
-2. Complete the DNS verification steps
-3. Once verified, your app will be live at `https://myapp.click`
+1. Click **Register Domain**
+2. Search for an available domain (e.g., `myapp.click`)
+3. Complete the registration
+4. Your app will be live at `https://myapp.click`
 
 ### 4. Install CLI
 
