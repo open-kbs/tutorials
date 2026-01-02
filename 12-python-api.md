@@ -363,25 +363,25 @@ openkbs deploy
 
 ```bash
 # Status
-curl -X POST https://your-kb.openkbs.com/api
+curl -X POST https://<your-domain>/api
 
 # Create item
-curl -X POST https://your-kb.openkbs.com/api \
+curl -X POST https://<your-domain>/api \
   -H "Content-Type: application/json" \
   -d '{"action":"create","name":"Test","description":"Python test"}'
 
 # List items
-curl -X POST https://your-kb.openkbs.com/api \
+curl -X POST https://<your-domain>/api \
   -H "Content-Type: application/json" \
   -d '{"action":"list"}'
 
 # Upload media (base64 encoded)
-curl -X POST https://your-kb.openkbs.com/api \
+curl -X POST https://<your-domain>/api \
   -H "Content-Type: application/json" \
   -d '{"action":"upload","filename":"test.txt","contentType":"text/plain","data":"SGVsbG8gV29ybGQ="}'
 
 # List media
-curl -X POST https://your-kb.openkbs.com/api \
+curl -X POST https://<your-domain>/api \
   -H "Content-Type: application/json" \
   -d '{"action":"list-media"}'
 ```
