@@ -300,40 +300,42 @@ def upload_media(body):
     # Use CloudFront URL
     url = f"/{s3_key}"
 
-    with db_conn.cursor() as cur:
-        cur.execute(
-            'INSERT INTO media (filename, s3_key, content_type, size_bytes) VALUES (%s, %s, %s, %s) RETURNING id, created_at',
-            (filename, s3_key, content_type, len(file_bytes))
-        )
-        row = cur.fetchone()
-        return {
-            'id': row[0],
-            'filename': filename,
-            's3Key': s3_key,
-            'url': url,
-            'createdAt': str(row[1])
-        }
+    cur = db_conn.cursor()
+    cur.execute(
+        'INSERT INTO media (filename, s3_key, content_type, size_bytes) VALUES (%s, %s, %s, %s) RETURNING id, created_at',
+        (filename, s3_key, content_type, len(file_bytes))
+    )
+    row = cur.fetchone()
+    cur.close()
+    return {
+        'id': row[0],
+        'filename': filename,
+        's3Key': s3_key,
+        'url': url,
+        'createdAt': str(row[1])
+    }
 
 
 def list_media():
     if not db_conn:
         raise Exception(f'Database not connected: {db_error}')
 
-    with db_conn.cursor() as cur:
-        cur.execute('SELECT id, filename, s3_key, content_type, size_bytes, created_at FROM media ORDER BY created_at DESC LIMIT 50')
-        rows = cur.fetchall()
-        return [
-            {
-                'id': row[0],
-                'filename': row[1],
-                's3Key': row[2],
-                'url': f"/{row[2]}",
-                'contentType': row[3],
-                'sizeBytes': row[4],
-                'createdAt': str(row[5])
-            }
-            for row in rows
-        ]
+    cur = db_conn.cursor()
+    cur.execute('SELECT id, filename, s3_key, content_type, size_bytes, created_at FROM media ORDER BY created_at DESC LIMIT 50')
+    rows = cur.fetchall()
+    cur.close()
+    return [
+        {
+            'id': row[0],
+            'filename': row[1],
+            's3Key': row[2],
+            'url': f"/{row[2]}",
+            'contentType': row[3],
+            'sizeBytes': row[4],
+            'createdAt': str(row[5])
+        }
+        for row in rows
+    ]
 
 
 def delete_media(body):
@@ -344,14 +346,16 @@ def delete_media(body):
 
     media_id = body.get('id')
 
-    with db_conn.cursor() as cur:
-        cur.execute('SELECT s3_key FROM media WHERE id = %s', (media_id,))
-        row = cur.fetchone()
-        if row:
-            s3_client.delete_object(Bucket=s3_bucket, Key=row[0])
-            cur.execute('DELETE FROM media WHERE id = %s', (media_id,))
-            return {'deleted': True}
-        return {'deleted': False}
+    cur = db_conn.cursor()
+    cur.execute('SELECT s3_key FROM media WHERE id = %s', (media_id,))
+    row = cur.fetchone()
+    if row:
+        s3_client.delete_object(Bucket=s3_bucket, Key=row[0])
+        cur.execute('DELETE FROM media WHERE id = %s', (media_id,))
+        cur.close()
+        return {'deleted': True}
+    cur.close()
+    return {'deleted': False}
 ```
 
 ## 4. Install Dependencies and Deploy
