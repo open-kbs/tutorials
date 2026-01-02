@@ -67,7 +67,8 @@ python-demo/
 │       ├── handler.py
 │       └── requirements.txt
 └── site/
-    └── index.html
+    ├── index.html
+    └── settings.json
 ```
 
 ## 1. Configuration

@@ -65,7 +65,8 @@ java-demo/
 │       ├── pom.xml
 │       └── src/main/java/com/example/Handler.java
 └── site/
-    └── index.html
+    ├── index.html
+    └── settings.json
 ```
 
 ## 1. Configuration

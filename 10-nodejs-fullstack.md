@@ -79,7 +79,8 @@ nodejs-demo/
 │       ├── index.mjs
 │       └── package.json
 └── site/
-    └── index.html
+    ├── index.html
+    └── settings.json
 ```
 
 ## 1. Configuration
