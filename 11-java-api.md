@@ -40,7 +40,7 @@ In **Platform Setup**:
 1. Click **Register Domain**
 2. Search for an available domain (e.g., `myapp.click`)
 3. Complete the registration
-4. Your app will be live at `https://myapp.click`
+4. Your app will be live at `https://<your-domain>`
 
 ### 4. Install CLI
 
@@ -57,6 +57,7 @@ openkbs login
 java-demo/
 ├── openkbs.json
 ├── functions/
+│   ├── settings.json
 │   └── api/
 │       ├── pom.xml
 │       └── src/main/java/com/example/Handler.java
@@ -90,6 +91,14 @@ java-demo/
 }
 ```
 
+`functions/settings.json` (get your KB ID from Platform Setup):
+```json
+{
+  "kbId": "your-kb-id",
+  "region": "us-east-1"
+}
+```
+
 ## 2. Maven Configuration
 
 `functions/api/pom.xml`:
@@ -102,7 +111,7 @@ java-demo/
 
     <groupId>com.example</groupId>
     <artifactId>api</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.0</version>
     <packaging>jar</packaging>
 
     <properties>
@@ -118,14 +127,14 @@ java-demo/
             <version>1.2.3</version>
         </dependency>
         <dependency>
-            <groupId>com.google.code.gson</groupId>
-            <artifactId>gson</artifactId>
-            <version>2.10.1</version>
-        </dependency>
-        <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
             <version>42.7.4</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.11.0</version>
         </dependency>
     </dependencies>
 
@@ -134,7 +143,7 @@ java-demo/
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
-                <version>3.5.0</version>
+                <version>3.5.1</version>
                 <executions>
                     <execution>
                         <phase>package</phase>
@@ -174,7 +183,8 @@ public class Handler implements RequestHandler<Map<String, Object>, Map<String, 
 
             String dbUrl = System.getenv("DATABASE_URL");
             if (dbUrl != null) {
-                // Parse postgres://user:pass@host/db?params
+                // Parse postgres://user:pass@host/db?params format
+                // Convert to jdbc:postgresql://host/db?user=X&password=Y&params
                 Pattern p = Pattern.compile("postgres(?:ql)?://([^:]+):([^@]+)@([^/]+)/([^?]+)(?:\\?(.*))?");
                 Matcher m = p.matcher(dbUrl);
 
@@ -185,11 +195,13 @@ public class Handler implements RequestHandler<Map<String, Object>, Map<String, 
                     String database = m.group(4);
                     String params = m.group(5);
 
+                    // Build JDBC URL
                     StringBuilder jdbc = new StringBuilder();
                     jdbc.append("jdbc:postgresql://").append(host).append("/").append(database);
                     jdbc.append("?user=").append(user);
                     jdbc.append("&password=").append(pass);
 
+                    // Add other params (skip channel_binding - not supported by JDBC)
                     if (params != null) {
                         for (String param : params.split("&")) {
                             if (!param.startsWith("channel_binding=")) {
@@ -200,7 +212,7 @@ public class Handler implements RequestHandler<Map<String, Object>, Map<String, 
 
                     dbConnection = DriverManager.getConnection(jdbc.toString());
 
-                    // Create table
+                    // Create table on first connect
                     try (Statement stmt = dbConnection.createStatement()) {
                         stmt.execute("""
                             CREATE TABLE IF NOT EXISTS items (
@@ -211,10 +223,12 @@ public class Handler implements RequestHandler<Map<String, Object>, Map<String, 
                             )
                         """);
                     }
+                } else {
+                    dbError = "Invalid DATABASE_URL format";
                 }
             }
         } catch (Exception e) {
-            dbError = e.getMessage();
+            dbError = e.getClass().getSimpleName() + ": " + e.getMessage();
         }
     }
 
@@ -255,12 +269,15 @@ public class Handler implements RequestHandler<Map<String, Object>, Map<String, 
     }
 
     private List<Map<String, Object>> listItems() throws SQLException {
-        if (dbConnection == null) throw new SQLException("Database not connected");
+        if (dbConnection == null) {
+            throw new SQLException("Database not connected: " + dbError);
+        }
 
         List<Map<String, Object>> items = new ArrayList<>();
+        String sql = "SELECT * FROM items ORDER BY created_at DESC LIMIT 50";
 
         try (Statement stmt = dbConnection.createStatement();
-             ResultSet rs = stmt.executeQuery("SELECT * FROM items ORDER BY created_at DESC LIMIT 50")) {
+             ResultSet rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
                 items.add(Map.of(
                     "id", rs.getInt("id"),
@@ -274,13 +291,15 @@ public class Handler implements RequestHandler<Map<String, Object>, Map<String, 
     }
 
     private Map<String, Object> createItem(JsonObject req) throws SQLException {
-        if (dbConnection == null) throw new SQLException("Database not connected");
+        if (dbConnection == null) {
+            throw new SQLException("Database not connected: " + dbError);
+        }
 
         String name = req.get("name").getAsString();
         String desc = req.has("description") ? req.get("description").getAsString() : "";
+        String sql = "INSERT INTO items (name, description) VALUES (?, ?) RETURNING id, created_at";
 
-        try (PreparedStatement stmt = dbConnection.prepareStatement(
-                "INSERT INTO items (name, description) VALUES (?, ?) RETURNING id, created_at")) {
+        try (PreparedStatement stmt = dbConnection.prepareStatement(sql)) {
             stmt.setString(1, name);
             stmt.setString(2, desc);
             ResultSet rs = stmt.executeQuery();
@@ -295,11 +314,14 @@ public class Handler implements RequestHandler<Map<String, Object>, Map<String, 
     }
 
     private Map<String, Object> deleteItem(JsonObject req) throws SQLException {
-        if (dbConnection == null) throw new SQLException("Database not connected");
+        if (dbConnection == null) {
+            throw new SQLException("Database not connected: " + dbError);
+        }
 
         int id = req.get("id").getAsInt();
+        String sql = "DELETE FROM items WHERE id = ?";
 
-        try (PreparedStatement stmt = dbConnection.prepareStatement("DELETE FROM items WHERE id = ?")) {
+        try (PreparedStatement stmt = dbConnection.prepareStatement(sql)) {
             stmt.setInt(1, id);
             return Map.of("deleted", stmt.executeUpdate() > 0);
         }
@@ -307,33 +329,207 @@ public class Handler implements RequestHandler<Map<String, Object>, Map<String, 
 }
 ```
 
-## 4. Build and Deploy
+## 4. Frontend
+
+`site/index.html`:
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Java 25 + PostgreSQL Demo</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: system-ui; background: #f0f2f5; min-height: 100vh; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+
+        header { background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 25px; border-radius: 12px; margin-bottom: 20px; }
+        header h1 { font-size: 26px; margin-bottom: 8px; }
+        .badges { display: flex; gap: 8px; flex-wrap: wrap; }
+        .badge { background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 20px; font-size: 13px; }
+        .badge.ok { background: rgba(72,187,120,0.3); }
+        .badge.error { background: rgba(245,101,101,0.3); }
+
+        .card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .card h2 { font-size: 18px; margin-bottom: 15px; color: #333; }
+
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 6px; font-weight: 500; color: #555; font-size: 14px; }
+        input, textarea { width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; }
+        textarea { resize: vertical; min-height: 80px; }
+        input:focus, textarea:focus { outline: none; border-color: #667eea; box-shadow: 0 0 0 3px rgba(102,126,234,0.1); }
+
+        button { background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; }
+        button:hover { opacity: 0.9; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .items { display: flex; flex-direction: column; gap: 12px; }
+        .item { display: flex; justify-content: space-between; align-items: flex-start; padding: 16px; background: #f8fafc; border-radius: 10px; }
+        .item-content { flex: 1; }
+        .item-name { font-weight: 600; color: #1a202c; margin-bottom: 4px; }
+        .item-desc { color: #718096; font-size: 14px; margin-bottom: 6px; }
+        .item-date { font-size: 12px; color: #a0aec0; }
+        .item-delete { background: #fed7d7; color: #c53030; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; }
+        .item-delete:hover { background: #feb2b2; }
+
+        .empty { text-align: center; color: #a0aec0; padding: 40px; }
+        .loading { text-align: center; color: #718096; padding: 30px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Java 25 + PostgreSQL</h1>
+            <div class="badges" id="status">
+                <span class="badge">Checking...</span>
+            </div>
+        </header>
+
+        <div class="card">
+            <h2>Add Item</h2>
+            <form id="addForm">
+                <div class="form-group">
+                    <label>Name</label>
+                    <input type="text" id="itemName" required placeholder="Enter item name">
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="itemDesc" placeholder="Optional description"></textarea>
+                </div>
+                <button type="submit" id="submitBtn">Add Item</button>
+            </form>
+        </div>
+
+        <div class="card">
+            <h2>Items</h2>
+            <div id="items" class="items">
+                <div class="loading">Loading...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API = '/api';
+
+        async function checkStatus() {
+            try {
+                const res = await fetch(API, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'status' })
+                });
+                const data = await res.json();
+                document.getElementById('status').innerHTML = `
+                    <span class="badge ok">Java ${data.java}</span>
+                    <span class="badge ${data.db ? 'ok' : 'error'}">PostgreSQL ${data.db ? '✓' : '✗'}</span>
+                `;
+            } catch (e) {
+                document.getElementById('status').innerHTML = `<span class="badge error">Error</span>`;
+            }
+        }
+
+        async function loadItems() {
+            try {
+                const res = await fetch(API, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'list' })
+                });
+                const items = await res.json();
+                const container = document.getElementById('items');
+
+                if (!items.length) {
+                    container.innerHTML = '<div class="empty">No items yet</div>';
+                    return;
+                }
+
+                container.innerHTML = items.map(item => `
+                    <div class="item">
+                        <div class="item-content">
+                            <div class="item-name">${item.name}</div>
+                            ${item.description ? `<div class="item-desc">${item.description}</div>` : ''}
+                            <div class="item-date">${item.createdAt}</div>
+                        </div>
+                        <button class="item-delete" onclick="deleteItem(${item.id})">Delete</button>
+                    </div>
+                `).join('');
+            } catch (e) {
+                document.getElementById('items').innerHTML = '<div class="empty">Error loading</div>';
+            }
+        }
+
+        async function deleteItem(id) {
+            if (!confirm('Delete this item?')) return;
+            await fetch(API, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'delete', id })
+            });
+            loadItems();
+        }
+
+        document.getElementById('addForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('submitBtn');
+            btn.disabled = true;
+
+            try {
+                await fetch(API, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'create',
+                        name: document.getElementById('itemName').value,
+                        description: document.getElementById('itemDesc').value
+                    })
+                });
+                document.getElementById('addForm').reset();
+                loadItems();
+            } finally {
+                btn.disabled = false;
+            }
+        });
+
+        checkStatus();
+        loadItems();
+    </script>
+</body>
+</html>
+```
+
+## 5. Build and Deploy
 
 ```bash
 cd functions/api
-mvn package
+mvn clean package
+unzip -o target/api-1.0.jar -d .
 cd ../..
 openkbs deploy
 ```
 
-## 5. Test
+> **Note:** The shaded JAR must be extracted into the function folder. Lambda loads classes directly from the folder structure, not from a JAR file.
+
+## 6. Test
+
+Replace `<your-domain>` with your registered domain:
 
 ```bash
 # Status
-curl -X POST https://your-kb.openkbs.com/api
+curl -X POST https://<your-domain>/api
 
 # Create item
-curl -X POST https://your-kb.openkbs.com/api \
+curl -X POST https://<your-domain>/api \
   -H "Content-Type: application/json" \
   -d '{"action":"create","name":"Test Item","description":"A test"}'
 
 # List items
-curl -X POST https://your-kb.openkbs.com/api \
+curl -X POST https://<your-domain>/api \
   -H "Content-Type: application/json" \
   -d '{"action":"list"}'
 
 # Delete item
-curl -X POST https://your-kb.openkbs.com/api \
+curl -X POST https://<your-domain>/api \
   -H "Content-Type: application/json" \
   -d '{"action":"delete","id":1}'
 ```
