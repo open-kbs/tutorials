@@ -2,7 +2,7 @@ import json
 import os
 import base64
 import uuid
-import psycopg2
+import pg8000
 import boto3
 from urllib.parse import urlparse
 
@@ -16,35 +16,36 @@ try:
     db_url = os.environ.get('DATABASE_URL')
     if db_url:
         parsed = urlparse(db_url)
-        db_conn = psycopg2.connect(
+        db_conn = pg8000.connect(
             host=parsed.hostname,
             port=parsed.port or 5432,
             database=parsed.path[1:],
             user=parsed.username,
             password=parsed.password,
-            sslmode='require'
+            ssl_context=True
         )
         db_conn.autocommit = True
 
-        with db_conn.cursor() as cur:
-            cur.execute('''
-                CREATE TABLE IF NOT EXISTS items (
-                    id SERIAL PRIMARY KEY,
-                    name VARCHAR(255) NOT NULL,
-                    description TEXT,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            ''')
-            cur.execute('''
-                CREATE TABLE IF NOT EXISTS media (
-                    id SERIAL PRIMARY KEY,
-                    filename VARCHAR(255) NOT NULL,
-                    s3_key VARCHAR(500) NOT NULL,
-                    content_type VARCHAR(100),
-                    size_bytes INTEGER,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            ''')
+        cur = db_conn.cursor()
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS items (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                description TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS media (
+                id SERIAL PRIMARY KEY,
+                filename VARCHAR(255) NOT NULL,
+                s3_key VARCHAR(500) NOT NULL,
+                content_type VARCHAR(100),
+                size_bytes INTEGER,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        cur.close()
 except Exception as e:
     db_error = str(e)
 
@@ -102,18 +103,19 @@ def list_items():
     if not db_conn:
         raise Exception(f'Database not connected: {db_error}')
 
-    with db_conn.cursor() as cur:
-        cur.execute('SELECT id, name, description, created_at FROM items ORDER BY created_at DESC LIMIT 50')
-        rows = cur.fetchall()
-        return [
-            {
-                'id': row[0],
-                'name': row[1],
-                'description': row[2] or '',
-                'createdAt': str(row[3])
-            }
-            for row in rows
-        ]
+    cur = db_conn.cursor()
+    cur.execute('SELECT id, name, description, created_at FROM items ORDER BY created_at DESC LIMIT 50')
+    rows = cur.fetchall()
+    cur.close()
+    return [
+        {
+            'id': row[0],
+            'name': row[1],
+            'description': row[2] or '',
+            'createdAt': str(row[3])
+        }
+        for row in rows
+    ]
 
 
 def create_item(body):
@@ -123,18 +125,19 @@ def create_item(body):
     name = body.get('name')
     description = body.get('description', '')
 
-    with db_conn.cursor() as cur:
-        cur.execute(
-            'INSERT INTO items (name, description) VALUES (%s, %s) RETURNING id, created_at',
-            (name, description)
-        )
-        row = cur.fetchone()
-        return {
-            'id': row[0],
-            'name': name,
-            'description': description,
-            'createdAt': str(row[1])
-        }
+    cur = db_conn.cursor()
+    cur.execute(
+        'INSERT INTO items (name, description) VALUES (%s, %s) RETURNING id, created_at',
+        (name, description)
+    )
+    row = cur.fetchone()
+    cur.close()
+    return {
+        'id': row[0],
+        'name': name,
+        'description': description,
+        'createdAt': str(row[1])
+    }
 
 
 def delete_item(body):
@@ -143,9 +146,11 @@ def delete_item(body):
 
     item_id = body.get('id')
 
-    with db_conn.cursor() as cur:
-        cur.execute('DELETE FROM items WHERE id = %s', (item_id,))
-        return {'deleted': cur.rowcount > 0}
+    cur = db_conn.cursor()
+    cur.execute('DELETE FROM items WHERE id = %s', (item_id,))
+    deleted = cur.rowcount > 0
+    cur.close()
+    return {'deleted': deleted}
 
 
 def upload_media(body):
@@ -171,52 +176,45 @@ def upload_media(body):
         ContentType=content_type
     )
 
-    # Generate presigned URL for access
-    url = s3_client.generate_presigned_url(
-        'get_object',
-        Params={'Bucket': s3_bucket, 'Key': s3_key},
-        ExpiresIn=86400
-    )
+    # Use CloudFront URL
+    url = f"/{s3_key}"
 
-    with db_conn.cursor() as cur:
-        cur.execute(
-            'INSERT INTO media (filename, s3_key, content_type, size_bytes) VALUES (%s, %s, %s, %s) RETURNING id, created_at',
-            (filename, s3_key, content_type, len(file_bytes))
-        )
-        row = cur.fetchone()
-        return {
-            'id': row[0],
-            'filename': filename,
-            's3Key': s3_key,
-            'url': url,
-            'createdAt': str(row[1])
-        }
+    cur = db_conn.cursor()
+    cur.execute(
+        'INSERT INTO media (filename, s3_key, content_type, size_bytes) VALUES (%s, %s, %s, %s) RETURNING id, created_at',
+        (filename, s3_key, content_type, len(file_bytes))
+    )
+    row = cur.fetchone()
+    cur.close()
+    return {
+        'id': row[0],
+        'filename': filename,
+        's3Key': s3_key,
+        'url': url,
+        'createdAt': str(row[1])
+    }
 
 
 def list_media():
     if not db_conn:
         raise Exception(f'Database not connected: {db_error}')
 
-    with db_conn.cursor() as cur:
-        cur.execute('SELECT id, filename, s3_key, content_type, size_bytes, created_at FROM media ORDER BY created_at DESC LIMIT 50')
-        rows = cur.fetchall()
-        result = []
-        for row in rows:
-            url = s3_client.generate_presigned_url(
-                'get_object',
-                Params={'Bucket': s3_bucket, 'Key': row[2]},
-                ExpiresIn=86400
-            ) if s3_client else f"/{row[2]}"
-            result.append({
-                'id': row[0],
-                'filename': row[1],
-                's3Key': row[2],
-                'url': url,
-                'contentType': row[3],
-                'sizeBytes': row[4],
-                'createdAt': str(row[5])
-            })
-        return result
+    cur = db_conn.cursor()
+    cur.execute('SELECT id, filename, s3_key, content_type, size_bytes, created_at FROM media ORDER BY created_at DESC LIMIT 50')
+    rows = cur.fetchall()
+    cur.close()
+    return [
+        {
+            'id': row[0],
+            'filename': row[1],
+            's3Key': row[2],
+            'url': f"/{row[2]}",
+            'contentType': row[3],
+            'sizeBytes': row[4],
+            'createdAt': str(row[5])
+        }
+        for row in rows
+    ]
 
 
 def delete_media(body):
@@ -227,11 +225,13 @@ def delete_media(body):
 
     media_id = body.get('id')
 
-    with db_conn.cursor() as cur:
-        cur.execute('SELECT s3_key FROM media WHERE id = %s', (media_id,))
-        row = cur.fetchone()
-        if row:
-            s3_client.delete_object(Bucket=s3_bucket, Key=row[0])
-            cur.execute('DELETE FROM media WHERE id = %s', (media_id,))
-            return {'deleted': True}
-        return {'deleted': False}
+    cur = db_conn.cursor()
+    cur.execute('SELECT s3_key FROM media WHERE id = %s', (media_id,))
+    row = cur.fetchone()
+    if row:
+        s3_client.delete_object(Bucket=s3_bucket, Key=row[0])
+        cur.execute('DELETE FROM media WHERE id = %s', (media_id,))
+        cur.close()
+        return {'deleted': True}
+    cur.close()
+    return {'deleted': False}

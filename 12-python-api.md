@@ -111,10 +111,10 @@ python-demo/
 
 `functions/api/requirements.txt`:
 ```
-psycopg2-binary
+pg8000
 ```
 
-> **Note:** `boto3` is pre-installed in AWS Lambda Python runtime - no need to include it.
+> **Note:** We use `pg8000` (pure Python) instead of `psycopg2-binary` because psycopg2 has platform-specific binaries that don't work across macOS/Linux. `boto3` is pre-installed in AWS Lambda.
 
 ## 3. Handler
 
@@ -124,7 +124,7 @@ import json
 import os
 import base64
 import uuid
-import psycopg2
+import pg8000
 import boto3
 from urllib.parse import urlparse
 
@@ -138,35 +138,36 @@ try:
     db_url = os.environ.get('DATABASE_URL')
     if db_url:
         parsed = urlparse(db_url)
-        db_conn = psycopg2.connect(
+        db_conn = pg8000.connect(
             host=parsed.hostname,
             port=parsed.port or 5432,
             database=parsed.path[1:],
             user=parsed.username,
             password=parsed.password,
-            sslmode='require'
+            ssl_context=True
         )
         db_conn.autocommit = True
 
-        with db_conn.cursor() as cur:
-            cur.execute('''
-                CREATE TABLE IF NOT EXISTS items (
-                    id SERIAL PRIMARY KEY,
-                    name VARCHAR(255) NOT NULL,
-                    description TEXT,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            ''')
-            cur.execute('''
-                CREATE TABLE IF NOT EXISTS media (
-                    id SERIAL PRIMARY KEY,
-                    filename VARCHAR(255) NOT NULL,
-                    s3_key VARCHAR(500) NOT NULL,
-                    content_type VARCHAR(100),
-                    size_bytes INTEGER,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            ''')
+        cur = db_conn.cursor()
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS items (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                description TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS media (
+                id SERIAL PRIMARY KEY,
+                filename VARCHAR(255) NOT NULL,
+                s3_key VARCHAR(500) NOT NULL,
+                content_type VARCHAR(100),
+                size_bytes INTEGER,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        cur.close()
 except Exception as e:
     db_error = str(e)
 
@@ -223,18 +224,19 @@ def list_items():
     if not db_conn:
         raise Exception(f'Database not connected: {db_error}')
 
-    with db_conn.cursor() as cur:
-        cur.execute('SELECT id, name, description, created_at FROM items ORDER BY created_at DESC LIMIT 50')
-        rows = cur.fetchall()
-        return [
-            {
-                'id': row[0],
-                'name': row[1],
-                'description': row[2] or '',
-                'createdAt': str(row[3])
-            }
-            for row in rows
-        ]
+    cur = db_conn.cursor()
+    cur.execute('SELECT id, name, description, created_at FROM items ORDER BY created_at DESC LIMIT 50')
+    rows = cur.fetchall()
+    cur.close()
+    return [
+        {
+            'id': row[0],
+            'name': row[1],
+            'description': row[2] or '',
+            'createdAt': str(row[3])
+        }
+        for row in rows
+    ]
 
 
 def create_item(body):
@@ -244,18 +246,19 @@ def create_item(body):
     name = body.get('name')
     description = body.get('description', '')
 
-    with db_conn.cursor() as cur:
-        cur.execute(
-            'INSERT INTO items (name, description) VALUES (%s, %s) RETURNING id, created_at',
-            (name, description)
-        )
-        row = cur.fetchone()
-        return {
-            'id': row[0],
-            'name': name,
-            'description': description,
-            'createdAt': str(row[1])
-        }
+    cur = db_conn.cursor()
+    cur.execute(
+        'INSERT INTO items (name, description) VALUES (%s, %s) RETURNING id, created_at',
+        (name, description)
+    )
+    row = cur.fetchone()
+    cur.close()
+    return {
+        'id': row[0],
+        'name': name,
+        'description': description,
+        'createdAt': str(row[1])
+    }
 
 
 def delete_item(body):
@@ -264,9 +267,11 @@ def delete_item(body):
 
     item_id = body.get('id')
 
-    with db_conn.cursor() as cur:
-        cur.execute('DELETE FROM items WHERE id = %s', (item_id,))
-        return {'deleted': cur.rowcount > 0}
+    cur = db_conn.cursor()
+    cur.execute('DELETE FROM items WHERE id = %s', (item_id,))
+    deleted = cur.rowcount > 0
+    cur.close()
+    return {'deleted': deleted}
 
 
 def upload_media(body):
