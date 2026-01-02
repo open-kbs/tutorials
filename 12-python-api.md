@@ -112,8 +112,9 @@ python-demo/
 `functions/api/requirements.txt`:
 ```
 psycopg2-binary
-boto3
 ```
+
+> **Note:** `boto3` is pre-installed in AWS Lambda Python runtime - no need to include it.
 
 ## 3. Handler
 
