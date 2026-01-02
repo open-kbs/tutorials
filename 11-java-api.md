@@ -42,12 +42,15 @@ In **Platform Setup**:
 3. Complete the registration
 4. Your app will be live at `https://<your-domain>`
 
-### 4. Install CLI
+### 4. Install CLI and Get kbId
 
 ```bash
 npm install -g openkbs
 openkbs login
+openkbs ls
 ```
+
+Note your `kbId` - you'll need it for `functions/settings.json`.
 
 ---
 
@@ -91,7 +94,7 @@ java-demo/
 }
 ```
 
-`functions/settings.json` (get your KB ID from Platform Setup):
+`functions/settings.json` (use the `kbId` from `openkbs ls`):
 ```json
 {
   "kbId": "your-kb-id",

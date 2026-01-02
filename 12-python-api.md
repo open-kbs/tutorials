@@ -42,14 +42,17 @@ In **Platform Setup**:
 1. Click **Register Domain**
 2. Search for an available domain (e.g., `myapp.click`)
 3. Complete the registration
-4. Your app will be live at `https://myapp.click`
+4. Your app will be live at `https://<your-domain>`
 
-### 4. Install CLI
+### 4. Install CLI and Get kbId
 
 ```bash
 npm install -g openkbs
 openkbs login
+openkbs ls
 ```
+
+Note your `kbId` - you'll need it for `functions/settings.json`.
 
 ---
 
@@ -59,6 +62,7 @@ openkbs login
 python-demo/
 ├── openkbs.json
 ├── functions/
+│   ├── settings.json
 │   └── api/
 │       ├── handler.py
 │       └── requirements.txt
@@ -92,6 +96,14 @@ python-demo/
   ],
 
   "site": "./site"
+}
+```
+
+`functions/settings.json` (use the `kbId` from `openkbs ls`):
+```json
+{
+  "kbId": "your-kb-id",
+  "region": "us-east-1"
 }
 ```
 
